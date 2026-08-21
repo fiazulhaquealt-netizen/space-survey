@@ -555,6 +555,24 @@ static func close_enough(dist: float, radius: float) -> bool:
 	return dist < maxf(radius * 22.0, 400.0)
 
 
+# Hills only near the skin. EZ (Earth 100 km) stays a globe — continents, not grass.
+const STAMP_BELOW_KM := 3.0
+
+
+static func close_detail(alt_km: float) -> float:
+	const NEAR_KM := 2.0
+	const FAR_KM := 35.0
+	if alt_km >= FAR_KM:
+		return 0.0
+	if alt_km <= NEAR_KM:
+		return 1.0
+	return 1.0 - (alt_km - NEAR_KM) / (FAR_KM - NEAR_KM)
+
+
+static func ground_stamp_ok(alt_km: float, kill_km: float) -> bool:
+	return alt_km > kill_km and alt_km < STAMP_BELOW_KM
+
+
 static func make_ring_material(recipe: Dictionary) -> StandardMaterial3D:
 	var rmat := StandardMaterial3D.new()
 	rmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

@@ -142,6 +142,12 @@ func _initialize() -> void:
 	var patch_src := FileAccess.get_file_as_string("res://scripts/world/surface_patch.gd")
 	failed += _check("trees_unshaded", patch_src.find("SHADING_MODE_UNSHADED") >= 0)
 
+	# 100 km AIR is EZ bird-eye: the cook globe, not a 36 km black stamp.
+	failed += _check("no_stamp_at_earth_ez", not G.ground_stamp_ok(100.0, 29.0))
+	failed += _check("no_stamp_in_air", not G.ground_stamp_ok(50.0, 29.0))
+	failed += _check("ez_globe_no_hills", G.close_detail(100.0) < 0.05)
+	failed += _check("skin_hills", G.close_detail(1.5) > 0.9)
+
 	if failed == 0:
 		print("planet_generator: OK")
 		quit(0)

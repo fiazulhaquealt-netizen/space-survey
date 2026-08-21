@@ -569,9 +569,7 @@ func refresh(ship_pos: Vector3, delta: float) -> void:
 		if b.get("mat") != null and b.mat is ShaderMaterial:
 			var to_sun: Vector3 = star_true - bpos
 			var alt := dist - vrad
-			var near_band := maxf(vrad * 0.04, 60.0)
-			var far_band := maxf(vrad * 0.7, 2800.0)
-			var det := 1.0 - clampf((alt - near_band) / maxf(far_band - near_band, 1.0), 0.0, 1.0)
+			var det := PlanetGenerator.close_detail(alt)
 			PlanetGenerator.apply_view(b.mat, to_sun, det)
 			if not b.get("close_maps", false) and PlanetGenerator.close_enough(dist, vrad):
 				PlanetGenerator.ensure_close_maps(b.mat, b.recipe)

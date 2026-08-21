@@ -3,7 +3,8 @@ extends Node3D
 # Local bird-view ground just above the kill line. Hills, water, trees.
 # Still a paint. You still do not land.
 
-const SHOW_BELOW_KM := 140.0
+# Skin-band bird-eye only (km). EZ at 100 km must be the cook globe, not this stamp.
+const SHOW_BELOW_KM := 3.0
 const PATCH_KM := 36.0
 const SEGS := 48
 const TREE_MAX := 220
@@ -57,9 +58,15 @@ func hush() -> void:
 	visible = false
 
 
+static func should_show(body: String, alt: float, kill: float) -> bool:
+	if body != "Earth":
+		return false
+	return PlanetGenerator.ground_stamp_ok(alt, kill)
+
+
 func update_for(ship_pos: Vector3, body: String, radius: float, alt: float) -> void:
 	var kill := Ephemeris.surface_kill_km(body)
-	var show := body == "Earth" and _ready_maps and alt > kill and alt < SHOW_BELOW_KM
+	var show := _ready_maps and should_show(body, alt, kill)
 	if not show:
 		visible = false
 		return

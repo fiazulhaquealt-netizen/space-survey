@@ -16,8 +16,8 @@ You do not land. A billion stars stay sky points until you are there.
 | Where | What you see |
 |---|---|
 | Far (past the far plane) | Sky disc, real angular size, same recipe |
-| **EZ** (exclusion) | Cook **mesh**. High bird-eye: curve, continents, weather, craters. Not trees. |
-| Skin (~100 m) | Local ground patch + kit props. Still no landing. |
+| **EZ** (exclusion) | Cook **mesh**. High bird-eye: curve, continents, weather, craters. Not a 36 km stamp. |
+| Skin (last few km; Earth dies at 29 km) | Local ground patch + kit props on airless worlds. Still no landing. |
 
 The mesh cut is the **near face**, not the centre. A star bigger than the far plane still becomes a ball when you close in.
 
