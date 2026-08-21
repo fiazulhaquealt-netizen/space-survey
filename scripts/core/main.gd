@@ -180,7 +180,9 @@ func _ready() -> void:
 	cam.current = true
 	cam.fov = 70.0
 	cam.near = 0.05
-	cam.far = Ephemeris.CAM_FAR_SOL
+	# Keep the spherical star shell well inside the flat camera far plane. A
+	# near-equal far value clips the forward cap into a camera-following black circle.
+	cam.far = Ephemeris.CAM_RENDER_FAR_KM
 	add_child(cam)
 	ship.camera = cam
 
@@ -1583,7 +1585,7 @@ func _arrive(system_id: String, at_pos := Vector3(INF, INF, INF)) -> void:
 	planets.speed_zones = false   # Sol 1:1 slice: speed pass comes later
 	ship.newton = system_id == SystemDB.SOL
 	if ship.camera:
-		ship.camera.far = Ephemeris.CAM_FAR_SOL if system_id == SystemDB.SOL else 100000.0
+		ship.camera.far = Ephemeris.CAM_RENDER_FAR_KM
 	# Fly-arrive passes your preserved local offset (no teleport); wormhole/map use the system's pad.
 	ship.true_pos = at_pos if not is_inf(at_pos.x) else SystemDB.arrival_pos(system_id)
 	ship.transiting = false

@@ -17,6 +17,7 @@ func _initialize() -> void:
 	failed += _check("impostors_inside_far", sky < E.CAM_FAR_SOL)
 	failed += _check("stars_behind_impostors", stars > sky)
 	failed += _check("stars_inside_far", stars < E.CAM_FAR_SOL)
+	failed += _check("star_shell_has_render_margin", E.CAM_RENDER_FAR_KM >= stars * 1.5)
 
 	var moon_eq := Vector3.ZERO
 	var sun_eq := Vector3.ZERO

@@ -82,6 +82,9 @@ var surface_kill_extra_km := {}
 # the 160–442k band, so the Sun painting drew through those worlds.
 const SKY_SHELL_KM := 500000.0
 const SKY_STAR_KM := 510000.0
+# Camera projection is a flat plane through a spherical star shell. Keep a
+# generous margin or the forward cap clips into a circle that follows the view.
+const CAM_RENDER_FAR_KM := SKY_STAR_KM * 2.0
 # Far enough that the Moon (≈384,000 km) is a real cook ball from GEO, not a
 # clipped 0.5° stamp. Meshes cut over at 0.85 × this; impostors stay behind that.
 const CAM_FAR_SOL := 520000.0
