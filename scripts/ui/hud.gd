@@ -1401,6 +1401,11 @@ func refresh() -> void:
 		if air_top > 0.0:
 			extra += "\nAir     %.0f km top" % air_top
 		if planets != null:
+			if ship.newton and planets.cook_n > 0:
+				extra += "\nCook    %d  · mesh %d  · sky %d" % [
+					planets.cook_n, planets.cook_mesh_n, planets.cook_sky_n]
+				if planets.cook_look != "":
+					extra += "\nLook    %s" % planets.cook_look
 			if who == "Earth":
 				var mrel: Vector3 = planets.rel_of("Moon")
 				if mrel.length() > 1.0:

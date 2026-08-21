@@ -129,6 +129,19 @@ func _initialize() -> void:
 		failed += _check("apply_view_detail", is_equal_approx(float(cm.get_shader_parameter("detail")), 0.5))
 	cooked.sphere.free()
 
+	var sh := FileAccess.get_file_as_string("res://shaders/planet_cook.gdshader")
+	failed += _check("fills_map_voids", sh.find("pacman") >= 0 or sh.find("unmapped limbs") >= 0)
+	var gan := G.recipe_for({ "name": "Ganymede" })
+	failed += _check("ganymede_grid_noted", str(gan.get("notes", "")).contains("grid"))
+	var doc := FileAccess.get_file_as_string("res://PLANET_GENERATOR.md")
+	failed += _check("cook_doc", doc.find("Pacman") >= 0)
+	failed += _check("cook_log_spec", doc.find("Cook    ") >= 0)
+	var hud_src := FileAccess.get_file_as_string("res://scripts/ui/hud.gd")
+	failed += _check("hud_cook_line", hud_src.find("Cook    ") >= 0)
+	failed += _check("hud_look_line", hud_src.find("Look    ") >= 0)
+	var patch_src := FileAccess.get_file_as_string("res://scripts/world/surface_patch.gd")
+	failed += _check("trees_unshaded", patch_src.find("SHADING_MODE_UNSHADED") >= 0)
+
 	if failed == 0:
 		print("planet_generator: OK")
 		quit(0)

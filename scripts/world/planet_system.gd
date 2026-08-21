@@ -74,6 +74,10 @@ var speed_limit := INF
 var gravity := Vector3.ZERO
 var star_dist := INF              # distance to this system's primary star (gates FTL / warp)
 var speed_zones := false          # Sol 1:1 slice: speed pass comes later
+var cook_n := 0                   # physical worlds this frame
+var cook_mesh_n := 0              # cook balls in range
+var cook_sky_n := 0               # sky discs past the far plane
+var cook_look := ""               # nearest: name  mesh|sky  source  kind
 # Nearest named hub star you could "fly-arrive" into (id + distance + render offset). main reads
 # these in the hub: fly close enough and it drops you into that star's local frame (see _arrive).
 var hub_star_id := ""
@@ -486,6 +490,10 @@ func refresh(ship_pos: Vector3, delta: float) -> void:
 	hub_star_dist = INF
 	hub_star_id = ""
 	nearest_radius = 1.0
+	cook_n = 0
+	cook_mesh_n = 0
+	cook_sky_n = 0
+	cook_look = ""
 
 	# Render positions computed THIS frame, by name. Moons read their parent from here so
 	# they track the planet's visually-revolved position, not its raw Horizons spot (planets
@@ -580,6 +588,12 @@ func refresh(ship_pos: Vector3, delta: float) -> void:
 		# Stars use the same cut — never force the cook mesh off.
 		var physical: bool = b.get("physical", false)
 		var too_far: bool = physical and eph.physical_too_far(dist, rad)
+		if physical and not b.get("craft", false):
+			cook_n += 1
+			if too_far:
+				cook_sky_n += 1
+			else:
+				cook_mesh_n += 1
 		if b.model != null:
 			var on: bool = (physical and not too_far) or ((not physical) and sphere_a > 0.45)
 			b.model.visible = on
@@ -672,6 +686,14 @@ func refresh(ship_pos: Vector3, delta: float) -> void:
 	# speed_limit was accumulated above from each body's force-slow zone (min cap).
 	# Direction toward the nearest body (for the warp arrival ease-out).
 	nearest_dir = _rel.get(nearest_name, Vector3.ZERO).normalized()
+	for b in _bodies:
+		if str(b.name) != nearest_name:
+			continue
+		var rec: Dictionary = b.get("recipe", {})
+		var path := "sky" if (b.get("physical", false) and eph.physical_too_far(nearest_dist, float(b.radius))) else "mesh"
+		cook_look = "%s  %s  %s  %s" % [
+			str(b.name), path, str(rec.get("source", "?")), str(rec.get("kind", "?"))]
+		break
 	_place_sun_sky(ship_pos)
 	if _surface != null:
 		var salt: float = nearest_dist - nearest_radius

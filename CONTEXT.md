@@ -46,8 +46,8 @@ Time warp: period faster, comma slower. Dies in air or on burn.
 _Avoid_: u/s, warp-as-local-flight
 
 **Planet generator**:
-One cook. Catalog row → true position → recipe. Real map when we have evidence. Spectral/size when we do not. Sky is HYG points; you only cook a ball when the player is there. You will not land.
-_Avoid_: Earth texture hack, landing game, Elite clone, one mesh per planet, hand-authoring every star
+One cook. Catalog row → true position → recipe. Real map when we have evidence. Spectral/size when we do not. Sky is HYG points; you only cook a ball when the player is there. EZ is high bird-eye on that ball. Tape Cook/Look is the render log. Pacman voids in mosaics fill with recipe crust. You will not land.
+_Avoid_: Earth texture hack, landing game, Elite clone, one mesh per planet, hand-authoring every star, unique GLB per world
 
 **Skin kill / no landing**:
 Earth: you never go below 6400 km from the centre (skin 6371 + air 100 ≈ 6500; kill alt = 29 km). Other worlds: 100 m floor. `surface_kill_km` may raise it later. Death is a short tumble, then a snap to the nearest sweet park (GEO for Earth).

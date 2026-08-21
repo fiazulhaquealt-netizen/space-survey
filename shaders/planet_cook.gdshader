@@ -118,6 +118,14 @@ void fragment() {
 	float day = smoothstep(-0.04, 0.28, ndotl);
 	float lat = n.y;
 	vec3 alb = (has_albedo > 0.5) ? texture(albedo_tex, UV).rgb : color_a;
+	// Incomplete mosaics (Voyager moons) store unmapped limbs as black.
+	// Wrapped on a sphere that is a pacman bite. Fill with recipe crust.
+	if (has_albedo > 0.5 && kind != 3) {
+		float lum = max(alb.r, max(alb.g, alb.b));
+		float hole = 1.0 - smoothstep(0.015, 0.06, lum);
+		vec3 fillc = mix(color_a, color_b, fbm(n * 5.0 + seed));
+		alb = mix(alb, fillc, hole);
+	}
 	vec3 view_w0 = normalize(-v_world);
 	if (kind == 3) {
 		float mu = max(dot(n_world, view_w0), 0.0);

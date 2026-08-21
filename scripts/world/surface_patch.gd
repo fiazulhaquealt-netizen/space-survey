@@ -168,7 +168,7 @@ func _hash(p: Vector2) -> float:
 func _mat(water: bool) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.vertex_color_use_as_albedo = true
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.roughness = 0.22 if water else 0.92
 	m.metallic = 0.05 if water else 0.0
 	if water:
@@ -198,6 +198,7 @@ func _tree_mesh() -> ArrayMesh:
 	_cone(st, Vector3(0, 1.35, 0), 0.55, 1.4, green)
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.roughness = 0.9
 	st.set_material(mat)
 	return st.commit()

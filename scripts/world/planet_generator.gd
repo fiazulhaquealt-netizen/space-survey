@@ -166,6 +166,7 @@ const RECIPES := {
 		"albedo": "res://assets/planets/ganymede_2k.jpg",
 		"source": "ready-map",
 		"evidence": "USGS Voyager/Galileo photomosaic",
+		"notes": "sheet-grid",
 		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.45, "land_amount": 0.7,
 		"color_a": Color(0.70, 0.64, 0.56),
 	},
@@ -504,6 +505,8 @@ static func paint(spec: Dictionary, radius: float) -> Dictionary:
 	var mat := make_material(recipe, spec)
 	mi.material_override = mat
 	mi.visible = false
+	if physical:
+		mi.extra_cull_margin = 8000.0
 	return { "sphere": mi, "mat": mat, "recipe": recipe }
 
 
