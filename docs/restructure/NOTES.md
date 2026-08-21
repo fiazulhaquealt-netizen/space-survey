@@ -1,0 +1,301 @@
+# Astryx Restructure — Living Notes
+
+> Working log for the codebase modularization. Started 2026-06-20 (on the restored full
+> v0.11.5 working tree, base commit `d07f23e`). Updated as decisions land. Decisions that are
+> hard to reverse graduate into `docs/adr/`. This file is the scratch/everything log.
+
+> **✅ LANDED 2026-06-20 — merged into `main` (ff to `26aaafe`), clean boot.** Delivered: domain
+> folders + autoloads + `ARCHITECTURE.md`; `main.gd` 2093→1780; `combat.gd` 1352→1031 (CombatFX 149
+> + EnemyFactory 218 split out). **Stopped Phase 3 at the guardian-waves cluster on purpose** — it
+> shares combat's central `_aliens`/`_abolts`/`_spawn_bolt` and is read by main in 9 spots, so a
+> split would be a leaky bidirectional interface (same reason Nav/Tab was left in main). ship.gd
+> (1626) / hud.gd (1449) deferred — "need lots of work anyway," not the current focus.
+
+## Why we're doing this (the actual pain)
+
+Stated by the owner, verbatim intent:
+- `main.gd` is **too big** (2093 lines) — a god-object orchestrator.
+- Several files are **too large to work with** — even for an AI agent:
+  `main.gd` 2093 · `ship.gd` 1626 · `hud.gd` 1449 · `combat.gd` 1352.
+- File **names are inconsistent / weird**.
+- Goal: **super easy to scale and for people to contribute.**
+
+## Goal (locked)
+
+- **Unit of contribution = BOTH**, equally:
+  1. **Content** — adding ships / star systems / planets / missions / codex facts should be a
+	 drop-in, data-driven act.
+  2. **Features** — adding whole subsystems should have clear module boundaries to slot into.
+- Therefore: a **content/data layer** (registries, drop-in) **and** a **decoupled systems
+  layer** (no god-object).
+
+## Decisions locked
+
+| # | Decision | Notes |
+|---|----------|-------|
+| D1 | **Target paradigm = code-spawned + autoloads** | Keep building the world from code (project identity). Promote global services/DBs (`SystemDB`, `MissionDB`, `PlanetData`, `GameAudio`, `Codex`, `Ephemeris`) to Godot **autoload singletons** so any module reaches them without `main.gd` plumbing. NOT going full scene-idiomatic (too risky for a working game). NOT staying pure hand-wired (keeps the manual-wiring pain). |
+| D2 | **Approach = incremental + parse-check** | Tiny steps, commit after each, verify with `godot --headless --check-only` + agent spot-read. Owner playtests at milestones. No automated smoke/behavior test (accepted risk). Game must stay runnable & have a safe stopping point at every step. |
+| D3 | **Folder layout = by domain/feature** | `scripts/{core,autoload,flight,world,travel,combat,ui}/`. autoload/ holds the global services/DBs (D1). `game_state.gd` to be extracted from main.gd into core/. Safe to move (class_name = no import-path breakage). |
+| D4 | **Naming = file = snake_case(class_name)** | Rename FILES to match their class; classes untouched (low risk). Mismatches to fix: `systems.gd→system_db.gd`, `missions.gd→mission_db.gd`, `map.gd→star_map.gd`, `audio.gd→game_audio.gd`, `settings.gd→settings_menu.gd`, `minimap.gd→mini_map.gd`, `touch.gd→touch_controls.gd`. `props.gd` kept. ~20 others already match. |
+| D5 | **Split rule = responsibility seams (deep modules)** | Extract a concern only where it has a narrow interface. Line count is a smell to investigate, not a hard cap. No mechanical "chop at N lines." |
+
+## CRITICAL: path-based refs that do NOT follow class_name (must hand-fix on move)
+
+- `main.gd:396` — `load("res://scripts/touch.gd").new()` → update to new path (`flight/touch_controls.gd`).
+- `hud.gd:260` — `load("res://scripts/crosshair.gd").new()` → update to new path (`ui/crosshair.gd`).
+- `scenes/Main.tscn` — `ext_resource path="res://scripts/main.gd"` (uid-backed `uid://cuawipd10uicq`;
+  self-heals when the editor reopens, but update the path string anyway).
+- **Every `.gd` has a sibling `.gd.uid`** — `git mv` BOTH together or Godot regenerates UIDs and
+  breaks `.tscn` links. Open the editor once after moves to let it reimport/heal paths.
+- `hud.gd:27` loads `res://shaders/hud_text.gdshader` (shader, unaffected — there's a `shaders/` dir).
+- All static DB calls already global: `SystemDB.portals()`, `MissionDB.reward()` are STATIC — those
+  classes may NOT need autoloading at all (just stop instantiating). True autoload candidates are the
+  STATEFUL nodes currently `.new()`'d + ref-passed: `Ephemeris`, `GameAudio`, `Codex`, `PlanetData`,
+  `PlanetInfo`. (Per-module check needed in Phase 1.)
+
+## Orphan / cleanup found
+
+- `./Main.tscn` (repo root) = **stale orphan**: scriptless Node3D, uid `uid://84k2rihwnbwf`, NOT the
+  boot scene (project boots `res://scenes/Main.tscn`). Delete in Phase 0 (git-recoverable).
+
+## Proposed phase order (incremental, each = own commit + parse-check + playtest)
+
+- **Phase 0 — Mechanical reorg (near-zero risk):** make `scripts/{core,autoload,flight,world,travel,combat,ui}/`;
+  `git mv` each `.gd` + its `.uid` into place with D4 renames; fix the 2 `load()` paths + Main.tscn path;
+  delete orphan root `Main.tscn`. Open editor once → playtest → commit. *Immediate navigability win.*
+- **Phase 1 — Autoloads:** register stateful services as autoloads; delete their `.new()/add_child` +
+  ref-passing from `main.gd`; switch call sites to the singleton. (Medium risk — init order matters.)
+- **Phase 2 — Extract `GameState`** from `main.gd` (coins/claimed/visited/nav_unlocked + profile save/load).
+- **Phase 3 — Decompose the big-4 by responsibility seams**, one file per commit, biggest pain first
+  (`main.gd` → travel-controller + onboarding; `combat.gd` → waves/boss/bullets; `hud.gd` → panel groups;
+  `ship.gd` → flight vs visuals). Playtest each.
+
+## Naming inconsistencies found (the "weird names")
+
+File name ≠ class it holds — fixable:
+- `systems.gd` → `class SystemDB`
+- `map.gd` → `class StarMap`
+- `missions.gd` → `class MissionDB`
+- `audio.gd` → `class GameAudio`
+- `tutor.gd` → `class Tutor`
+- `props.gd` → vague ("props" = stations/platforms/probes)
+
+## Current architecture (facts, from code)
+
+- **29 scripts**, flat in `scripts/`, no sub-folders. 13.6k lines total.
+- **Every module has a global `class_name`** → modules find each other by type, NO `preload`
+  path deps → **moving files between folders will NOT break imports.** (Big enabler.)
+- **Almost no signals** (6 signals / 6 emits in 13.6k lines). Wiring is **direct method calls
+  on held references**, not events.
+- **`main.gd` is the spider**: holds refs to ship/hud/combat/planets/wormhole/codex/audio,
+  owns game state (coins, claimed, visited, nav-unlocked…), and runs the loop. Inside
+  `main.gd`: 151 `ship.` calls, 117 `hud.` calls, 38 `combat.`, 33 `planets.`.
+
+## Open questions (the grilling queue)
+
+- Q-A: Approach — **incremental & always-running** vs big-bang? (recommend incremental)
+- Q-B: **Naming convention** — what scheme fixes the "weird names"?
+- Q-C: **Folder taxonomy** — how do we group the 29+ files?
+- Q-D: **Decomposition principle** — how do we split main.gd / ship.gd / hud.gd / combat.gd?
+- Q-E: **Ordering** — what's the safe sequence (autoloads first? split main.gd first?).
+- Q-F: **Verification** — how do we prove we didn't break the game at each step?
+
+## Phase 0 execution log (DONE 2026-06-20, branch `restructure`)
+
+- Moved all 29 `.gd` **+ their `.gd.uid`** into `core/autoload/flight/world/travel/combat/ui/`
+  with the D4 renames. Fixed the 2 `load()` paths (`main.gd`, `hud.gd`), `scenes/Main.tscn`
+  script path, and `BUILD-ANDROID.md` prose path. Deleted orphan root `Main.tscn`.
+- **GOTCHA (important for any future file move):** Godot caches the global class→path map in
+  `.godot/global_script_class_cache.cfg`. After moving files it's STALE → `--check-only` floods
+  "Class X hides a global script class" / "Could not find script for class Y". **Fix: run
+  `godot --headless --import` once** to rebuild the registry (or open the editor). Not a real error.
+- After rebuild: **28/29 scripts parse clean.** The 1 residual (`touch_controls.gd`:
+  "Cannot infer the type of 'hit'") is **pre-existing** (present in baseline `touch.gd`) and only
+  an isolated-`--check-only` artifact — `_button_at()` has no declared return type. Whole-project
+  import accepts it. **Candidate trivial cleanup later:** annotate `_button_at()`'s return type.
+
+## Phase 1 execution log (IN PROGRESS, branch `restructure`)
+
+- **GameAudio ✅ DONE** (pilot). Registered `[autoload] GameAudio="*res://scripts/autoload/game_audio.gd"`;
+  dropped `class_name GameAudio`; consumers (`ship`, `combat`, `tutor`, `main`) now self-source via
+  `@onready var audio := GameAudio` instead of main-injection. Removed main's `.new()/add_child` +
+  `ship.audio=`/`combat.audio=`/`tutor.audio=` wiring. **All ~25 `audio.x()` call sites unchanged**
+  (alias kept) → near-zero behavior risk. `main.audio` external accessors (quest_log/planet_info/
+  star_map) still work because main keeps `audio` as an alias to the autoload.
+- **VERIFICATION METHOD CHANGED:** once an autoload exists, `godot --headless --check-only --script X`
+  gives FALSE "Identifier not found: GameAudio" — isolated compile has no autoload globals. **Use a
+  headless boot instead:** `timeout 30 godot --headless --quit-after 120` and grep for
+  `SCRIPT ERROR|Compile Error|Failed to load`. GameAudio passed (clean boot, exit 0).
+- **Codex / PlanetData / Ephemeris ✅ DONE** (same pattern). Registered all in `[autoload]`; dropped
+  their `class_name`; consumers self-source (`@onready var codex := Codex`, etc.); removed main's
+  `.new()/add_child` + every injection (`hud.codex=`, `planet_info.data=`/`.codex=`, `codex_panel.codex=`,
+  `quest_log.codex=`, `planets.eph=`). No `is/as` or type-annotation uses of the dropped names existed.
+- **Phase 1 COMPLETE.** 4 autoloads: `Ephemeris`, `PlanetData`, `Codex`, `GameAudio`. `SystemDB`/
+  `MissionDB` left as-is (already global static classes — no autoload needed). `main.gd` 2093 → 2079.
+  Verified by clean headless boot (exit 0, no script errors). **Owner playtest pending before Phase 2.**
+- Future cleanup (low priority): the kept `audio`/`eph`/`codex`/`data` aliases could migrate to direct
+  `GameAudio.x()` / `Ephemeris.x()` global calls; redundant `if audio != null` guards can go.
+
+## Phase 2 — extract GameState (autoload), INCREMENTAL slices
+
+Decision: GameState is an **autoload**. Bite size = **incremental slices** (safer; only boot +
+manual playtest as checks). **Refinement:** persistence stays the SINGLE writer in
+main._save_profile/_load_profile (reading/writing GameState fields) until the FINAL slice, when
+it moves into GameState.save()/load() — avoids profile.cfg clobber mid-transition.
+
+- **2a ✅ DONE** (`2185434`) — economy: `coins`, `claimed` + consts (CAPTURE/ARRIVAL_REWARD,
+  NAV_COST, NAV_UNLOCK_*) + pure `can_claim`/`claim_reward`/`add_coins` → GameState. main keeps thin
+  `can_claim`/`claim_reward` wrappers (onboarding note + save side-effects). External callers untouched.
+  Clean boot; completeness grep clean. NOTE: `CAPTURE_REWARD` is defined-but-unused (was already
+  unused in main) — leave for now.
+- **2b ✅ DONE** (`<next>`) — `visited`/`nav_unlocked`/`wormholes_found` dicts → GameState. main's
+  query/mutation methods (`is_visited`, `star_state`, `unlock_nav`, `grant_nav_location`,
+  `is_teleport_unlocked`) kept in main, now reading `GameState.visited` etc. No external refs to the
+  vars; external method callers (star_map/map_chart/quest_log/platform_teleport) untouched. Clean boot.
+  **LESSON:** `replace_all` is literal substring, NOT word-boundary — `_visited` is a substring of
+  `is_visited`, so the bulk rename mangled `func is_visited` → `func isGameState.visited` (caught +
+  fixed). Always grep for `[a-zA-Z]GameState\.` after a token replace_all.
+- **2c ✅ DONE** — persisted onboarding fields (`onboarding_step`, `_ob`→`onboarding_done`) → GameState.
+  Transient controller vars (`_ob_done_toast`, `_ob_kills_base/_boss_base`, `_onboard` steps array,
+  `_fresh_game`, `_map_seen`) stay in main. Used `_ob.` / `_ob[` scoped replaces to dodge the `_ob_*`
+  substring trap.
+- **2d ✅ DONE** — `_loaded_custom`→`GameState.customization`; persistence consolidated: GameState owns
+  `load_from(cfg)`/`save_into(cfg)`/`reset()`, main keeps the ConfigFile orchestration + its session keys
+  (active_quest, system, pos, ship_index). **CATCH:** autoloads SURVIVE `reload_current_scene()`, so
+  `reset_progress`/no-save now calls `GameState.reset()` to clear stale in-memory state (the old code
+  relied on main being recreated). Clean boot.
+- **PHASE 2 COMPLETE.** GameState autoload owns all persisted profile state. main.gd 2079 → 2049.
+  Reminder: state-extraction gives small line savings; **Phase 3 (decompose by responsibility seam)** is
+  the real main.gd/file-size relief.
+- **Playtest checklist (2c/2d):** ship customization persists across restart; onboarding/beginner-quest
+  progress persists & doesn't re-trigger; **Reset Progress** (Settings) truly wipes coins/visited/codex
+  (the autoload-reset path); plus the 2a coin checks.
+- **Playtest checklist for 2a:** claim a capture reward (G panel), buy a navigator / chart a lane
+  (coin spend), arrive at a NEW system (+150 bonus), and confirm **coins persist across a restart**
+  (the save/load path now round-trips through GameState).
+
+## Phase 3 — decompose big files by responsibility seam (the real size relief)
+
+Order: pilot with the cleanest self-contained seam, then bigger ones. Verify each by headless boot.
+
+- **3a ✅ DONE — MusicDirector** (`<next>`). Lifted the two-track lobby⇄ship music state machine out of
+  main.gd into `core/music_director.gd` (163 lines, `class_name MusicDirector`, spawned by main).
+  Narrow interface: `update(delta, interstellar, hull_name)`; main keeps `_is_interstellar()` and calls
+  it each frame. Director ducks the engine via the GameAudio autoload directly. **main.gd 2049 → 1878
+  (−171 lines)** — the first real size win (Phase 1+2 barely moved it). Clean boot.
+  - Folder note: put in `core/` (spawned by main). Audio is now split `autoload/game_audio` (SFX) +
+	`core/music_director` (music) — could justify a future `scripts/audio/` grouping.
+- **3b ✅ DONE — Onboarding controller** (`<next>`). Lifted the GETTING STARTED beginner quest out of
+  main.gd into `core/onboarding.gd` (128 lines, `class_name Onboarding`, Node spawned by main, holds a
+  `main` ref). Owns the `_onboard` step list + transient vars + the update loop; persisted progress
+  stays in GameState. main keeps 6 one-line wrappers (`notify_map_opened`, `notify_log_opened`,
+  `_ob_note`, `restart_onboarding`, `onboarding_state`, `_update_onboarding`) so all call sites
+  (StarMap/QuestLog external + gameplay-event internal) are untouched; exposed `current_step_id()` for
+  main's objective arrow. The `_ob_done_toast` boot-init moved into `Onboarding._ready()` (runs after
+  the profile loads). **main.gd 1878 → 1780 (−98).** Clean boot.
+  - Found vestigial: `_map_seen` / `_log_seen` were write-only (moved into controller, kept for safety);
+	`_fresh_game` in main is now write-only/dead too — candidate removal later.
+- **Cumulative: main.gd 2093 → 1780** (−313) across MusicDirector (163) + Onboarding (128) + GameState (90).
+- **Nav/Tab-targeting — REJECTED as a seam (2026-06-20).** Mapped it: the state is cross-cutting, NOT
+  self-contained — `_active_quest` 23 refs, `_nav_target` 17, `_marks` 16, `_nav_goal` 13, `_nav_locked`
+  11, woven through _process / input / scan / travel-arrival. Extracting it would rewrite 100+ scattered
+  refs and leave a LEAKY interface (main reaching into `nav._active_quest` everywhere) — violates D5
+  (responsibility seams, not line count). Left in main on purpose. The easy self-contained seams
+  (music, onboarding) are now exhausted; remaining seams are more entangled and need per-file care.
+- **ARCHITECTURE.md** added at repo root — one-line purpose for every file (contributor map).
+- **Candidate next seams (each needs careful per-file work):**
+  - `combat.gd`: FX/asset builders (materials/_menace_paint pure + _boom/_hit_flash/_load_*_model
+	spawners) → `combat/combat_fx.gd` — clean-ish but MANY internal call sites. ~250 lines.
+  - `combat.gd`: guardian-waves/boss cluster (~250 lines) — shares combat state.
+  - `combat.gd`: Raptor-2 laser (_update_laser/_build_laser/_show_shot_beam/_step_shot_beam) ~150.
+  - `ship.gd` (1626) / `hud.gd` (1449): not yet mapped.
+- **Laser — mapped, partially clean (2026-06-20).** The **shot-beam tracer** (`_show_shot_beam`/
+  `_step_shot_beam` + `_shot_beam*` vars, 2 call sites) is pure VFX → cleanly liftable (~50 lines).
+  BUT the **nose laser** (`_update_laser`) is a WEAPON: it iterates aliens + applies damage along the
+  beam (LASER_RADIUS), so it interweaves VFX with gameplay — not a pure-FX lift. Beam state vars are
+  otherwise confined to lines 352-504 (no leaks).
+- **Conclusion for the remaining god-files:** the cheap self-contained lifts (music, onboarding) are
+  done. `combat.gd` (and likely `ship.gd`/`hud.gd`) interweave VFX + gameplay + shared mutable state,
+  so they need a **deliberate per-file design pass** (decide the VFX/gameplay boundary, maybe a damage
+  callback or an FX node that combat drives) — NOT quick lifts. Best done fresh, file by file.
+- **combat material builders — looked pure, AREN'T quite.** `_trail_material` reads the instance var
+  `_trail_grad`; `_menace_paint` needs `ALIEN_SIZE`. So a `combat/combat_fx.gd` static helper must
+  thread those deps (pass `_trail_grad` / `ALIEN_SIZE` as params). Doable but fiddly — a careful job,
+  not a tail-of-session lift. `_bolt_material` and `_rand_dir` ARE pure.
+
+- **3c ✅ DONE — CombatFX** (combat.gd). Extracted transient VFX + bolt/flash materials
+  (`boom`/`hit_flash`/`enemy_flash`/`bolt_material`/`trail_material` + the private `_flash_mat`/
+  `_make_glow`/`_make_splatter` + the glow/splatter/plume textures) into `combat/combat_fx.gd`
+  (149 lines, `class_name CombatFX`, Node spawned by combat). combat calls `fx.boom(...)` etc. and
+  `fx.bolt_material(...)` to build its shared bolt mats. Threaded the deps by giving CombatFX its own
+  textures (built in its `_ready`); `boom`'s `ALIEN_SIZE` default → `CombatFX.DEFAULT_BOOM_SIZE`.
+  **combat.gd 1352 → 1225 (−127).** Clean boot. **Playtest: fire bolts (cyan/pink), get hit (sparks),
+  kill enemies (boom), Lyra red lasers, HaniStar pink bolts — all VFX should look identical.**
+
+- **3d ✅ DONE — EnemyFactory** (combat.gd). Extracted the unit-builder cluster (model loaders
+  `load_alien_model`/`load_boss_model`/`find_mesh`, builders `make_alien`/`make_boss`/`make_enemy`,
+  `menace_paint`, `_enemy_name`, geometry helpers `_meshes`/`_aabb`/`_fit_and_light`, plus all the
+  alien/boss size·HP·speed consts + the `BOSS_NAMES` pool) into `combat/enemy_factory.gd` (218 lines,
+  `class_name EnemyFactory`, Node3D spawned by combat **at the origin** so loaded models share combat's
+  floating-origin frame). combat calls `_factory.make_alien()` etc.; the guardian-wave cluster (still
+  in combat) uses `_factory.{load_alien_model,load_boss_model,make_enemy,menace_paint}` as primitives;
+  `_spawn_guard_wave` reads `EnemyFactory.BOSS_NAMES`. Kept a private `_rand_dir` copy in combat (still
+  used by _revive/_step_pickups/guardian spawns). Removed **dead** `_boss_name_for` (no callers).
+  **combat.gd 1225 → 1031 (−194).** Clean import (no class-cache warnings) + clean boot.
+  **Playtest: enter a hostile star (swarm spawns + look right), fight a guardian body (boss + minions
+  spawn, menace red-glow throb, capture on clear), Vortex in the Alien zone — all enemies build/scale
+  as before.**
+
+## ▶ NEXT SESSION — start here
+
+Verified base: branch `restructure`, all green (P0/P1/P2/P3a/P3b playtested; P3c/P3d boot-verified).
+main.gd 2093→1780, combat.gd 1352→1031 (CombatFX 149 + EnemyFactory 218 split out).
+Recommended next steps, in order:
+1. **(optional) Merge or keep `restructure`** — decide whether to merge into `main` now (it's a solid,
+   verified improvement) or keep stacking Phase 3 first.
+2. **More combat.gd:** next clusters — the guardian-waves/boss cluster (`set_guardians`/`_spawn_guard_wave`/
+   `_update_guard_waves`/`_step_boss`/`_boss_burst`/`_make_guardian_boss`/`_summon_minion` → a
+   `guardian_waves.gd`), then the laser weapon-vs-VFX split (tracer is pure, nose-laser does damage).
+3. **Then** ship.gd (1626) and hud.gd (1449) — map them first.
+4. **Separately from the restructure:** the pre-existing bugs (scan, planet-positions, buy-navigation)
+   and the **#1 save/load "needs rework"** item (get specifics from owner first).
+- **REMINDER:** the "buy navigation missing" bug is still open and lives in the nav-economy area —
+  worth bisecting vs `407e32c` before more nav-adjacent work.
+- **Playtest (3a):** music still cross-fades lobby⇄ship when flying out to open space / back; HaniNebula
+  & Raptor 2 Neo still get the dedicated theme; engine ducks under the ship track.
+
+## Playtest results — 2026-06-20 (owner)
+
+- ✅ **Reset Progress** (P2d autoload-reset path) — works.
+- ✅ **Music crossfade** (P3a MusicDirector) — works.
+- ✅ **Onboarding / GETTING STARTED** (P3b) — works.
+- ✅ **Audio** (P1 GameAudio autoload) — works.
+- ⚠ **#1 Save/load round-trip** (P2 GameState) — "needs rework, leaving for now." UNCHARACTERIZED —
+  could be a P2 persistence regression OR a design rework. **TODO: get specifics from owner** (what
+  field didn't persist?). Deferred.
+- 🟢 **Confirmed PRE-EXISTING (not refactor regressions):** scan bug (#6), planet-positions oddity
+  (#7), "buy navigation missing" (#8). Owner: "old bug, we continue." → the refactor did NOT introduce
+  these; safe to keep decomposing. (Still worth fixing eventually, separate from the restructure.)
+
+## ⚠ KNOWN ISSUES / regressions to investigate (do NOT lose these)
+
+- **"Buying navigation option seems missing"** (reported by owner after 2a playtest, 2026-06-20).
+  The buy/chart-a-lane nav option appears absent. **SUSPECT: possibly introduced by Phase 2a** —
+  2a edited the exact nav-economy path (`nav_cost`, `unlock_nav`, `buy_navigator` now read
+  `GameState.coins`/`GameState.NAV_*`). Could also be pre-existing (the restored v0.11.5 baseline
+  was WIP).
+  - **Where to look:** the "CHART LANE — %d coins" button in `ui/star_map.gd` (~line 345, calls
+	`main.nav_cost(sys)`); the button only shows when `main.star_state(id) == "locked"`
+	(`core/main.gd`), which depends on `_nav_unlocked` / `is_visited` / wormhole-found state.
+	Also `main.buy_navigator()` (map Navigate / autopilot) and `start_autopilot`.
+  - **Bisect:** compare against `407e32c` (pre-2a) — `git stash` then
+	`git checkout 407e32c` and see if the option is present there. If yes → 2a caused it; if no →
+	pre-existing in the v0.11.5 baseline.
+  - **Status:** deferred per owner ("keep a note and move on"). Verify before merging `restructure`.
+
+## Confusions / things to flag (owner asked me to surface these)
+
+- Scratch asset dump at repo root (local only). (low priority)
+- Local agent skill copies of `think-before-building` —
+  duplication, probably harness scaffolding, not game. (low priority)
+- Need to confirm `scenes/` folder contents (only `Main.tscn` referenced so far).

@@ -1,0 +1,655 @@
+class_name PlanetGenerator
+extends RefCounted
+# One cook. Every world is a recipe. A real map when we have evidence,
+# invented land/ocean when we do not. Map path is the USGS / NASA swap slot.
+# Close-up extras (clouds, night, height) bind when the player goes near.
+
+const COOK_SHADER := preload("res://shaders/planet_cook.gdshader")
+
+# Named Sol recipes. albedo is the evidence slot. Missing files fall through
+# to colour so a world still cooks. extras bind on approach (ensure_close_maps).
+const RECIPES := {
+	"Sun": {
+		"kind": "star",
+		"albedo": "res://assets/planets/sun_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Solar System Scope / NASA photosphere",
+		"cloud_amount": 0.0,
+		"water_shine": 0.0,
+		"land_amount": 0.0,
+		"color_a": Color(1.00, 0.85, 0.30),
+		"color_b": Color(1.00, 0.62, 0.18),
+	},
+	"Earth": {
+		"kind": "rocky",
+		"albedo": "res://assets/planets/earth_2k.jpg",
+		"clouds": "res://assets/planets/earth_clouds_2k.jpg",
+		"night": "res://assets/planets/earth_night_2k.jpg",
+		"height": "res://assets/planets/earth_height.jpg",
+		"specular": "res://assets/planets/earth_spec_2k.png",
+		"normal": "res://assets/planets/earth_normal_2k.png",
+		"source": "ready-map",
+		"evidence": "Solar System Scope / NASA Blue Marble",
+		"cloud_amount": 1.0,
+		"city_amount": 1.0,
+		"water_shine": 0.85,
+		"ice_amount": 0.1,
+		"air_amount": 1.0,
+		"color_ocean": Color(0.03, 0.09, 0.22),
+		"color_air": Color(0.30, 0.56, 1.0),
+	},
+	"Moon": {
+		"kind": "rocky",
+		"albedo": "res://assets/planets/moon_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Solar System Scope / NASA LROC",
+		"cloud_amount": 0.0,
+		"water_shine": 0.0,
+		"ice_amount": 0.0,
+		"land_amount": 1.0,
+		"color_a": Color(0.78, 0.78, 0.80),
+	},
+	"Mercury": {
+		"kind": "rocky",
+		"albedo": "res://assets/planets/mercury_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Solar System Scope / MESSENGER",
+		"cloud_amount": 0.0,
+		"water_shine": 0.0,
+		"ice_amount": 0.02,
+		"land_amount": 1.0,
+		"color_a": Color(0.533, 0.533, 0.533),
+	},
+	"Venus": {
+		"kind": "rocky",
+		"albedo": "res://assets/planets/venus_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Solar System Scope / Venus cloud tops",
+		"cloud_amount": 0.0,
+		"water_shine": 0.0,
+		"ice_amount": 0.0,
+		"land_amount": 1.0,
+		"air_amount": 0.35,
+		"color_air": Color(0.90, 0.78, 0.45),
+		"color_a": Color(0.890, 0.831, 0.714),
+	},
+	"Mars": {
+		"kind": "rocky",
+		"albedo": "res://assets/planets/mars_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Solar System Scope / Viking / MGS",
+		"cloud_amount": 0.08,
+		"water_shine": 0.0,
+		"ice_amount": 0.08,
+		"land_amount": 1.0,
+		"color_a": Color(0.737, 0.353, 0.263),
+	},
+	"Jupiter": {
+		"kind": "gas",
+		"albedo": "res://assets/planets/jupiter_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Solar System Scope / Cassini / Hubble",
+		"cloud_amount": 0.0,
+		"water_shine": 0.0,
+		"band_count": 10.0,
+		"color_a": Color(0.690, 0.498, 0.208),
+		"color_b": Color(0.85, 0.70, 0.45),
+	},
+	"Saturn": {
+		"kind": "gas",
+		"albedo": "res://assets/planets/saturn_2k.jpg",
+		"rings": "res://assets/planets/saturn_ring_2k.png",
+		"source": "ready-map",
+		"evidence": "Solar System Scope / Cassini",
+		"cloud_amount": 0.0,
+		"water_shine": 0.0,
+		"band_count": 9.0,
+		"color_a": Color(0.886, 0.749, 0.490),
+		"color_b": Color(0.75, 0.62, 0.40),
+	},
+	"Uranus": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/uranus_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Solar System Scope / Voyager 2",
+		"cloud_amount": 0.0,
+		"water_shine": 0.0,
+		"ice_amount": 0.4,
+		"color_a": Color(0.294, 0.439, 0.867),
+	},
+	"Neptune": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/neptune_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Solar System Scope / Voyager 2",
+		"cloud_amount": 0.0,
+		"water_shine": 0.0,
+		"ice_amount": 0.35,
+		"color_a": Color(0.153, 0.275, 0.529),
+	},
+	"Phobos": {
+		"kind": "rocky",
+		"albedo": "res://assets/planets/phobos_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Viking mosaic (Stooke / PDS)",
+		"cloud_amount": 0.0, "water_shine": 0.0, "land_amount": 1.0,
+		"color_a": Color(0.42, 0.40, 0.38),
+	},
+	"Deimos": {
+		"kind": "rocky",
+		"albedo": "res://assets/planets/deimos_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Viking / MRO",
+		"cloud_amount": 0.0, "water_shine": 0.0, "land_amount": 1.0,
+		"color_a": Color(0.46, 0.44, 0.41),
+	},
+	"Io": {
+		"kind": "rocky",
+		"albedo": "res://assets/planets/io_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Galileo / Voyager",
+		"cloud_amount": 0.0, "water_shine": 0.0, "land_amount": 1.0,
+		"color_a": Color(0.95, 0.90, 0.50),
+		"color_b": Color(0.70, 0.35, 0.12),
+	},
+	"Europa": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/europa_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Galileo / Voyager SSI mosaic",
+		"cloud_amount": 0.0, "water_shine": 0.15, "ice_amount": 0.85, "land_amount": 0.2,
+		"color_a": Color(0.90, 0.88, 0.82),
+		"color_ice": Color(0.92, 0.94, 0.96),
+	},
+	"Ganymede": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/ganymede_2k.jpg",
+		"source": "ready-map",
+		"evidence": "USGS Voyager/Galileo photomosaic",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.45, "land_amount": 0.7,
+		"color_a": Color(0.70, 0.64, 0.56),
+	},
+	"Callisto": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/callisto_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Voyager mosaic (JPL/USGS)",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.3, "land_amount": 1.0,
+		"color_a": Color(0.50, 0.46, 0.44),
+	},
+	"Titan": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/titan_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Cassini ISS / VIMS",
+		"cloud_amount": 0.55, "water_shine": 0.2, "ice_amount": 0.15, "land_amount": 0.45,
+		"air_amount": 0.55,
+		"color_air": Color(0.85, 0.62, 0.22),
+		"color_a": Color(0.92, 0.66, 0.30),
+		"color_ocean": Color(0.25, 0.22, 0.18),
+	},
+	"Enceladus": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/enceladus_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Cassini",
+		"cloud_amount": 0.0, "water_shine": 0.05, "ice_amount": 0.95, "land_amount": 0.1,
+		"color_a": Color(0.92, 0.93, 0.94),
+	},
+	"Mimas": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/mimas_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Cassini",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.7, "land_amount": 1.0,
+		"color_a": Color(0.72, 0.70, 0.66),
+	},
+	"Tethys": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/tethys_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Cassini",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.8, "land_amount": 1.0,
+		"color_a": Color(0.80, 0.80, 0.78),
+	},
+	"Dione": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/dione_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Cassini",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.7, "land_amount": 1.0,
+		"color_a": Color(0.74, 0.73, 0.70),
+	},
+	"Rhea": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/rhea_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Cassini",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.65, "land_amount": 1.0,
+		"color_a": Color(0.70, 0.68, 0.64),
+	},
+	"Iapetus": {
+		"kind": "rocky",
+		"albedo": "res://assets/planets/iapetus_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Cassini two-tone",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.35, "land_amount": 1.0,
+		"color_a": Color(0.55, 0.42, 0.32),
+		"color_b": Color(0.88, 0.86, 0.82),
+	},
+	"Miranda": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/miranda_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Voyager 2",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.6, "land_amount": 1.0,
+		"color_a": Color(0.62, 0.60, 0.58),
+	},
+	"Ariel": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/ariel_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Voyager 2",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.7, "land_amount": 1.0,
+		"color_a": Color(0.70, 0.68, 0.66),
+	},
+	"Umbriel": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/umbriel_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Voyager 2",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.55, "land_amount": 1.0,
+		"color_a": Color(0.40, 0.38, 0.36),
+	},
+	"Titania": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/titania_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Voyager 2",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.6, "land_amount": 1.0,
+		"color_a": Color(0.58, 0.52, 0.48),
+	},
+	"Oberon": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/oberon_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Voyager 2",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.55, "land_amount": 1.0,
+		"color_a": Color(0.52, 0.46, 0.42),
+	},
+	"Triton": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/triton_2k.jpg",
+		"source": "ready-map",
+		"evidence": "Voyager 2",
+		"cloud_amount": 0.05, "water_shine": 0.05, "ice_amount": 0.7, "land_amount": 0.6,
+		"color_a": Color(0.72, 0.68, 0.62),
+		"color_b": Color(0.55, 0.45, 0.55),
+	},
+	"Pluto": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/pluto_2k.jpg",
+		"source": "ready-map",
+		"evidence": "New Horizons MVIC extended color",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.35, "land_amount": 1.0,
+		"color_a": Color(0.72, 0.60, 0.48),
+		"color_b": Color(0.85, 0.78, 0.70),
+	},
+	"Charon": {
+		"kind": "ice",
+		"albedo": "res://assets/planets/charon_2k.jpg",
+		"source": "ready-map",
+		"evidence": "New Horizons",
+		"cloud_amount": 0.0, "water_shine": 0.0, "ice_amount": 0.4, "land_amount": 1.0,
+		"color_a": Color(0.62, 0.55, 0.50),
+	},
+}
+
+const CLOSE_KEYS := ["clouds", "night", "height", "specular", "normal"]
+
+
+# Catalog row → cook spec. No GLB. Spectral/size pick kind and colour.
+static func color_from_spectral(sp: String) -> Color:
+	var c := sp.strip_edges().to_upper()
+	if c.is_empty():
+		return Color(1.00, 0.85, 0.50)
+	match c[0]:
+		"O":
+			return Color(0.60, 0.70, 1.00)
+		"B":
+			return Color(0.70, 0.80, 1.00)
+		"A":
+			return Color(0.95, 0.96, 1.00)
+		"F":
+			return Color(1.00, 0.98, 0.92)
+		"G":
+			return Color(1.00, 0.92, 0.65)
+		"K":
+			return Color(1.00, 0.76, 0.42)
+		"M":
+			return Color(1.00, 0.50, 0.30)
+		"L", "T":
+			return Color(0.72, 0.34, 0.26)
+		"D":
+			return Color(0.86, 0.90, 1.00)
+		_:
+			return Color(1.00, 0.85, 0.50)
+
+
+static func catalog_star(row: Dictionary) -> Dictionary:
+	var sp := str(row.get("spectral", ""))
+	var col := color_from_spectral(sp)
+	if row.has("color"):
+		col = row.color
+	return {
+		"name": str(row.get("name", "Star")),
+		"star": true,
+		"live": false,
+		"pos": row.get("pos", Vector3.ZERO),
+		"radius": float(row.get("radius", 5.0)),
+		"mass": float(row.get("mass", 40000.0)),
+		"color": col,
+		"glow": 2.0,
+		"spectral": sp,
+	}
+
+
+static func catalog_planet(row: Dictionary) -> Dictionary:
+	var re := float(row.get("pl_rade", row.get("radius_earth", 1.0)))
+	var teq := float(row.get("pl_eqt", 280.0))
+	var kind := "rocky"
+	if re >= 8.0:
+		kind = "gas"
+	elif re >= 2.0:
+		kind = "ice"
+	elif teq < 220.0:
+		kind = "ice"
+	var col := Color(0.55, 0.45, 0.38)
+	if kind == "gas":
+		col = Color(0.85, 0.55, 0.28) if teq > 800.0 else Color(0.55, 0.70, 0.85)
+	elif kind == "ice":
+		col = Color(0.32, 0.55, 0.72)
+	elif teq > 400.0:
+		col = Color(0.72, 0.40, 0.28)
+	return {
+		"name": str(row.get("name", "Planet")),
+		"star": false,
+		"kind": kind,
+		"pl_rade": re,
+		"radius": clampf(re * 1.4, 1.2, 8.0),
+		"color": col,
+		"glow": 0.4,
+		"live": false,
+		"pos": row.get("pos", Vector3(8.0, 0.4, 5.0)),
+	}
+
+
+static func recipe_for(spec: Dictionary) -> Dictionary:
+	var name := str(spec.get("name", ""))
+	if RECIPES.has(name):
+		var r: Dictionary = (RECIPES[name] as Dictionary).duplicate()
+		r["name"] = name
+		r["features"] = r.get("features", [])
+		if not has_map(r):
+			r["source"] = "named-pending-map"
+		return r
+	return invent(spec)
+
+
+static func invent(spec: Dictionary) -> Dictionary:
+	var name := str(spec.get("name", ""))
+	var color: Color = spec.get("color", Color(0.5, 0.5, 0.5))
+	var kind := "rocky"
+	var ocean_world := color.b > color.r + 0.08 and color.b > 0.45
+	var asked := str(spec.get("kind", ""))
+	if spec.get("star", false) or asked == "star":
+		kind = "star"
+	elif asked == "rocky" or asked == "gas" or asked == "ice":
+		kind = asked
+	elif spec.get("ring", false):
+		kind = "gas"
+	elif ocean_world:
+		kind = "ice" if float(spec.get("radius", 1.0)) < 4.0 else "gas"
+	elif float(spec.get("radius", 1.0)) >= 6.0 and not spec.get("physical", false):
+		kind = "gas"
+	var land := 0.55
+	var clouds := 0.38
+	var ice := 0.08
+	var shine := 0.35
+	var ocean := Color(0.03, 0.10, 0.22)
+	var land_c := color
+	if kind == "star":
+		land = 0.0
+		clouds = 0.0
+		shine = 0.0
+		ice = 0.0
+	elif kind == "gas":
+		land = 0.0
+		clouds = 0.0
+		shine = 0.0
+		ice = 0.0
+	elif kind == "ice" or ocean_world:
+		land = 0.18
+		clouds = 0.55
+		ice = 0.28
+		shine = 0.75
+		ocean = Color(color.r * 0.25, color.g * 0.35, color.b * 0.55).darkened(0.35)
+		land_c = Color(0.24, 0.36, 0.18)
+	else:
+		land = 0.62
+		clouds = 0.22
+		shine = 0.2
+		ocean = Color(0.04, 0.12, 0.18)
+		land_c = color
+	return {
+		"name": name,
+		"kind": kind,
+		"albedo": "",
+		"clouds": "",
+		"night": "",
+		"source": "invented",
+		"evidence": _invent_evidence(spec),
+		"color_a": color,
+		"color_b": color.lightened(0.18),
+		"color_land": land_c,
+		"color_ocean": ocean,
+		"ice_amount": ice,
+		"land_amount": land,
+		"cloud_amount": clouds,
+		"city_amount": 0.0,
+		"water_shine": shine,
+		"air_amount": 0.0,
+		"seed": float(name.hash() % 10000) * 0.017,
+		"features": [],
+	}
+
+
+static func _invent_evidence(spec: Dictionary) -> String:
+	var sp := str(spec.get("spectral", ""))
+	if sp != "":
+		return "catalog spectral %s" % sp
+	if spec.has("pl_rade"):
+		return "catalog radius %.2f Re" % float(spec.pl_rade)
+	return "invented from type/mass/color"
+
+
+static func has_map(recipe: Dictionary) -> bool:
+	return _tex_exists(str(recipe.get("albedo", "")))
+
+
+static func has_rings(recipe: Dictionary) -> bool:
+	return _tex_exists(str(recipe.get("rings", "")))
+
+
+static func _tex_exists(path: String) -> bool:
+	if path.is_empty():
+		return false
+	return FileAccess.file_exists(path) or ResourceLoader.exists(path)
+
+
+static func paint(spec: Dictionary, radius: float) -> Dictionary:
+	var recipe := recipe_for(spec)
+	var mi := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	var physical: bool = spec.get("physical", false)
+	var is_star: bool = spec.get("star", false) or str(recipe.get("kind", "")) == "star"
+	mesh.radius = radius
+	mesh.height = radius * 2.0
+	mesh.radial_segments = 192 if physical else 32
+	mesh.rings = 96 if physical else 16
+	if is_star and physical:
+		mesh.radial_segments = 96
+		mesh.rings = 48
+	mi.mesh = mesh
+	var mat := make_material(recipe, spec)
+	mi.material_override = mat
+	mi.visible = false
+	return { "sphere": mi, "mat": mat, "recipe": recipe }
+
+
+static func make_material(recipe: Dictionary, spec: Dictionary) -> Material:
+	return _cook_material(recipe, spec, false)
+
+
+static func apply_sky(mat: Material, recipe: Dictionary, spec: Dictionary) -> void:
+	if mat is StandardMaterial3D:
+		var sm := mat as StandardMaterial3D
+		if has_map(recipe):
+			var tex := load(str(recipe.albedo)) as Texture2D
+			if tex != null:
+				sm.albedo_texture = tex
+				sm.albedo_color = Color.WHITE
+				sm.emission_texture = tex
+		else:
+			sm.albedo_color = spec.get("color", Color.WHITE)
+			sm.emission = spec.get("color", Color.WHITE)
+
+
+static func apply_view(mat: Material, sun_dir: Vector3, detail: float) -> void:
+	if mat is ShaderMaterial:
+		var sm := mat as ShaderMaterial
+		if sun_dir.length_squared() < 0.0001:
+			sun_dir = Vector3(0.72, 0.28, 0.63)
+		sm.set_shader_parameter("sun_dir", sun_dir.normalized())
+		sm.set_shader_parameter("detail", clampf(detail, 0.0, 1.0))
+
+
+# Bind height/clouds/night when the player is close. Albedo is already on.
+static func ensure_close_maps(mat: Material, recipe: Dictionary) -> void:
+	if not mat is ShaderMaterial:
+		return
+	var sm := mat as ShaderMaterial
+	for key in CLOSE_KEYS:
+		var flag := _flag_for(key)
+		if float(sm.get_shader_parameter(flag)) > 0.5:
+			continue
+		_bind_tex(sm, recipe, key, _tex_for(key), flag)
+
+
+static func close_enough(dist: float, radius: float) -> bool:
+	if dist < 80000.0:
+		return true
+	return dist < maxf(radius * 22.0, 400.0)
+
+
+static func make_ring_material(recipe: Dictionary) -> StandardMaterial3D:
+	var rmat := StandardMaterial3D.new()
+	rmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	rmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	rmat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	rmat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS
+	rmat.albedo_color = Color(0.86, 0.79, 0.60, 0.85)
+	if has_rings(recipe):
+		var tex := load(str(recipe.rings)) as Texture2D
+		if tex != null:
+			rmat.albedo_texture = tex
+			rmat.albedo_color = Color(1, 1, 1, 1)
+	return rmat
+
+
+static func _cook_material(recipe: Dictionary, spec: Dictionary, close: bool) -> ShaderMaterial:
+	var mat := ShaderMaterial.new()
+	mat.shader = COOK_SHADER
+	var a: Color = recipe.get("color_a", spec.get("color", Color(0.45, 0.4, 0.35)))
+	var b: Color = recipe.get("color_b", a.lightened(0.18))
+	var land_c: Color = recipe.get("color_land", a)
+	var ocean: Color = recipe.get("color_ocean", Color(0.03, 0.09, 0.22))
+	mat.set_shader_parameter("color_a", Vector3(a.r, a.g, a.b))
+	mat.set_shader_parameter("color_b", Vector3(b.r, b.g, b.b))
+	mat.set_shader_parameter("color_land", Vector3(land_c.r, land_c.g, land_c.b))
+	mat.set_shader_parameter("color_ocean", Vector3(ocean.r, ocean.g, ocean.b))
+	var ice_c: Color = recipe.get("color_ice", Color(0.86, 0.89, 0.93))
+	mat.set_shader_parameter("color_ice", Vector3(ice_c.r, ice_c.g, ice_c.b))
+	var kind := str(recipe.get("kind", "rocky"))
+	mat.set_shader_parameter("kind", _kind_id(kind))
+	mat.set_shader_parameter("seed", float(recipe.get("seed", 0.0)))
+	mat.set_shader_parameter("ice_amount", float(recipe.get("ice_amount", 0.12)))
+	mat.set_shader_parameter("land_amount", float(recipe.get("land_amount", 0.32)))
+	mat.set_shader_parameter("cloud_amount", float(recipe.get("cloud_amount", 0.4)))
+	mat.set_shader_parameter("city_amount", float(recipe.get("city_amount", 0.0)))
+	mat.set_shader_parameter("water_shine", float(recipe.get("water_shine", 0.5)))
+	mat.set_shader_parameter("air_amount", float(recipe.get("air_amount", 0.0)))
+	var air_c: Color = recipe.get("color_air", Color(0.30, 0.56, 1.0))
+	mat.set_shader_parameter("color_air", Vector3(air_c.r, air_c.g, air_c.b))
+	mat.set_shader_parameter("band_count", float(recipe.get("band_count", 9.0 if kind == "gas" else 6.0)))
+	_bind_tex(mat, recipe, "albedo", "albedo_tex", "has_albedo")
+	if close:
+		for key in CLOSE_KEYS:
+			_bind_tex(mat, recipe, key, _tex_for(key), _flag_for(key))
+	else:
+		for key in CLOSE_KEYS:
+			mat.set_shader_parameter(_flag_for(key), 0.0)
+	return mat
+
+
+static func _kind_id(kind: String) -> int:
+	if kind == "gas":
+		return 1
+	if kind == "ice":
+		return 2
+	if kind == "star":
+		return 3
+	return 0
+
+
+static func _tex_for(key: String) -> String:
+	match key:
+		"clouds":
+			return "cloud_tex"
+		"night":
+			return "night_tex"
+		"height":
+			return "height_tex"
+		"specular":
+			return "spec_tex"
+		"normal":
+			return "normal_tex"
+		_:
+			return "albedo_tex"
+
+
+static func _flag_for(key: String) -> String:
+	match key:
+		"clouds":
+			return "has_clouds"
+		"night":
+			return "has_night"
+		"height":
+			return "has_height"
+		"specular":
+			return "has_spec"
+		"normal":
+			return "has_normal"
+		_:
+			return "has_albedo"
+
+
+static func _bind_tex(mat: ShaderMaterial, recipe: Dictionary, key: String, tex_u: String, flag_u: String) -> void:
+	var path := str(recipe.get(key, ""))
+	if _tex_exists(path):
+		var tex := load(path) as Texture2D
+		if tex != null:
+			mat.set_shader_parameter(tex_u, tex)
+			mat.set_shader_parameter(flag_u, 1.0)
+			return
+	mat.set_shader_parameter(flag_u, 0.0)

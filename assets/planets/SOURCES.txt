@@ -1,0 +1,51 @@
+First-pass painted-ball maps (2k). Swap the recipe albedo path later
+for USGS / NASA / ESA mosaics.
+
+Source: Solar System Scope solar textures
+https://www.solarsystemscope.com/textures/
+License: Creative Commons Attribution 4.0
+Based on NASA / USGS elevation and imagery.
+
+Earth extras (same pack / same license):
+  earth_clouds_2k.jpg   — cloud layer
+  earth_night_2k.jpg    — city lights
+  earth_normal_2k.png   — normal / hill lighting
+  earth_spec_2k.png     — water mask (white = ocean)
+
+NASA / GEBCO public-domain height (Blue Marble Next Generation):
+  earth_height.jpg      — land elevation + ice, 5400×2700
+  https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/topography-bathymetry-maps/
+
+Google Maps / Earth 3D tiles are not used (their terms do not allow this).
+
+Sun photosphere (`sun_2k.jpg`) and Saturn ring strip (`saturn_ring_2k.png`):
+same Solar System Scope pack (Wikimedia Commons FilePath).
+
+Moon mosaics (public domain NASA/USGS, resized to 2048×1024 2:1):
+  europa_2k.jpg     — Europa Voyager GalileoSSI global mosaic
+  io_2k.jpg         — Io from Galileo and Voyager missions (cropped to 2:1)
+  titan_2k.jpg      — Titan map october 2006 (Cassini ISS)
+  enceladus_2k.jpg  — Enceladus Color Map (Cassini)
+  ganymede_2k.jpg   — USGS Voyager/Galileo controlled color photomosaic (sheet crop; grid still on)
+  callisto_2k.jpg   — Callisto map NASA JPL Voyager mosaic
+  phobos_2k.jpg     — Phobos Viking mosaic (Stooke / PDS)
+  mimas_2k.jpg      — Cassini color map PIA18437
+  tethys_2k.jpg     — Cassini color map PIA18439
+  dione_2k.jpg      — Cassini color map PIA18434
+  rhea_2k.jpg       — Cassini color map PIA18438
+  iapetus_2k.jpg    — Cassini color map PIA18436
+  miranda_2k.jpg    — Voyager 2 / JPL / USGS
+  ariel_2k.jpg      — Voyager 2 / JPL / USGS
+  umbriel_2k.jpg    — Voyager 2 / JPL / USGS
+  titania_2k.jpg    — Voyager 2 / JPL / USGS
+  oberon_2k.jpg     — Voyager 2 / JPL / USGS
+  triton_2k.jpg     — Voyager 2 map PIA18668
+  pluto_2k.jpg      — New Horizons MVIC extended color PIA19956
+  charon_2k.jpg     — New Horizons global map PIA19866
+
+Deimos still has no 2:1 mosaic in the slot (named recipe, colour until a map lands).
+
+Re-fetch: python3 tools/fetch_planet_maps.py
+Ingest:    python3 tools/ingest_planet_maps.py
+
+Credit in-game and in CREDITS.md: Solar System Scope / NASA / USGS.
