@@ -46,7 +46,27 @@ clouds, landing, or per-world meshes.
 
 ## Verification
 
-Automated tests will establish that:
+Implementation is gated by a deterministic GPU smoke scene, not only source
+assertions. The scene renders four night-facing bodies through the production
+`PlanetGenerator` and production shader:
+
+- Earth-like atmosphere with a night map;
+- cold airless moon;
+- internally warm gas giant;
+- hot generated rocky world.
+
+All four render against an intentionally dense star backdrop, with known bright
+markers placed behind the planet discs. The smoke run saves one comparison PNG
+and checks representative pixels. It fails unless:
+
+- each night disc is distinguishable from the black sky;
+- the four recipes do not collapse to one universal brightness;
+- the cold airless moon remains the darkest case;
+- the hot world and gas giant retain recipe-appropriate emission/fill;
+- bright markers behind each solid disc remain occluded;
+- background markers immediately outside each limb remain visible.
+
+Focused automated tests will additionally establish that:
 
 - every generated non-star recipe receives a bounded night profile;
 - atmospheric, gas, ice, airless, and hot recipes produce distinct values;
@@ -54,6 +74,9 @@ Automated tests will establish that:
 - the material binds the derived profile;
 - the shader no longer contains the universal `col * 0.04` night rule.
 
-The original frame is then checked visually: the night-side globe must be
-recognizable, its curved limb must remain intact, and stars must remain hidden
-behind it while remaining visible outside it.
+The original gameplay frame is the final manual smoke check. Before/after
+captures use the same body, distance, camera direction, and exposure. The night
+side must become recognizable, its curved limb must remain intact, and stars
+must remain hidden behind it while remaining visible outside it. If the
+comparison image does not make the improvement obvious, the change does not
+ship even when unit tests pass.
