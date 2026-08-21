@@ -68,7 +68,8 @@ Debug (Sol only): F6 circularize at this height. F7 park at GEO. F9 fat engines 
 ## Later (do not build now)
 
 - **No special Sun sky path** — start next session here. `_sun_sky` is still a unique impostor. A star should be one physical body: cook mesh when the near face is in range, sky disc when it is not. Recreate with F9 into the Sun; mesh must be on inside ~1.64 R, disc off.
-- Richer 101 m assets (real tree kits, volcanoes). Skin kill and the first ground patch are in.
+- **Plane band** — after EZ reads as a globe: safety speed dump, then m/s flyover with one local height tile + low-poly kit (water, hills). Every body, recipe-picked. Not Google tiles. Earth 29 km kill currently blocks that band; airless worlds can take it first. See `PLANET_GENERATOR.md`.
+- Richer 101 m assets (real tree kits, volcanoes). Skin kill and the first ground patch are in. The 36 km stamp must not show at 100 km AIR.
 - Remaining moon mosaics in the same albedo slot (Deimos; Ganymede gridless USGS/NASA swap)
 - USGS / NASA / ESA 8k swap in the recipe albedo slot
 - **Vacuum RCS / empty-space spin**

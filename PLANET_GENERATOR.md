@@ -46,6 +46,40 @@ Look    Earth  mesh  ready-map  rocky
 
 Far: one point. Arrive: one cook from the recipe. EZ: the same ball, close maps bind. Unique planet GLBs cannot reach a billion.
 
+## Plane band (later — possible, not this slice)
+
+**Yes.** A Google-Earth-*feel* from a plane is possible on every planet, moon, and (with a different kit) a star’s skin — without Google, without a mesh per world, without killing the frame rate.
+
+Google Earth 3D tiles are **not** allowed. We do not stream their photogrammetry. The cook already has the legal path: NASA / USGS height where we have it, invented height from the recipe seed where we do not.
+
+### What it is
+
+You drop at EZ. Speed is forced down (safety). Inside the air / the last tens of km you fly at **m/s**, like a plane. The cook globe stays the horizon. Under the hull, one **local tile** rebuilds: hills from height, water from the mask, low-poly kit (rock, ice, tree, lava). Leave the band, the tile dies. You still do not land.
+
+Same system for every body. Recipe picks the kit. Earth: real DEM + water. Mars: rock + ice caps. Europa: ice. Titan: haze + methane lakes as a paint. Invented exoplanet: fbm from seed. Stars: no air, no trees — only if we ever want a chromosphere kit.
+
+### Why it does not hurt performance
+
+- Only the **nearest** body, only while you are in its EZ / air.
+- One tile (tens of km, not a planet). Rebuild when you move a few km, not every frame.
+- Low-poly kit instances (hundreds, not millions). No unique GLB per world.
+- Far systems stay HYG points. A billion worlds never all exist as mesh.
+- “Prerender” here means **bake the tile on entry** (height mesh + prop list), then draw it cheap. Not a video, not a planet-sized cache.
+
+### Speed
+
+Cruise dies at EZ (already). Then a **safety cap** so you cannot F9 through the tile: EZ dump to local, air / last-km band in m/s. Sol already has unused approach speed-zones; they stay off until this band is real. Fat engines stay a debug key, not the plane pass.
+
+### Honest limits
+
+- Earth kill is **29 km**. A true plane pass wants ~0.5–8 km. That kill line has to move, or Earth never sees hills as objects. Airless worlds already allow 100 m, so they get the band first.
+- This is a **survey flyover**, not a landing game. Skin still kills if you go below the floor.
+- It will look like a low-poly aerial, not photogrammetry. That is the point: readable water and relief at m/s, 60 fps on a potato.
+
+### Do not build yet
+
+Keep EZ as the cook globe (the 36 km black stamp at 100 km was the wrong layer). Plane-band tile + kit + safety cap is the next visual slice after the globe reads at EZ.
+
 ## Not this slice
 
-Landing. 50 unique planet models. Volumetric air. Gridless mosaic downloads. Rich tree kits.
+Landing. 50 unique planet models. Volumetric air. Gridless mosaic downloads. Rich tree kits. Google Earth tiles. Plane-band tile (see above).
