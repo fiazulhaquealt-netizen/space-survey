@@ -3,8 +3,9 @@
 A potato-friendly **third-person space explorer** in Godot 4 / GDScript. Launch
 from Earth, fly the **real** solar system, wormhole across a tested interstellar
 network to real exoplanets, dogfight aliens and their bosses, and customize your
-ship in the hangar. The world is spawned from code — emissive bodies, glow and a
-few low-poly meshes.
+ship in the hangar. The world is spawned from code: celestial-body recipes cook
+mapped or deterministic procedural worlds through one shared planet shader and
+a small reusable surface kit.
 
 ## ▶ Gameplay
 [![Astryx — gameplay](https://img.youtube.com/vi/txmrN1_HsiM/maxresdefault.jpg)](https://www.youtube.com/watch?v=txmrN1_HsiM)
@@ -26,6 +27,9 @@ few low-poly meshes.
   persists to your profile (defaults are the shipped layout).
 - **Flight feel** — sublight "space drift" that carries momentum through turns,
   weighted strafe, eased mouse-steer, and living animated booster flames.
+- **Recipe-cooked worlds** — one generator paints stars, planets, and moons from
+  observed maps when available and stable seeded properties otherwise. Close LODs
+  add height, water, clouds, rocks, and other recipe-selected surface details.
 - **Wormhole network** — a **5-hub** graph (Prim's MST + extra edges, BFS routing) with a
   *tested* guarantee: **Earth → anywhere ≤ 2 hops, any → any ≤ 3 hops** — you're never more
   than 3 jumps from a star. Fly to a portal, press **F**, transit the tunnel, arrive.
@@ -49,6 +53,42 @@ few low-poly meshes.
   you're never trapped). A rare, theatrical **teleport ritual** handles emergency-home and
   station→station jumps; a **platform-network console** fast-travels between unlocked stations.
 - **Audio** — per-ship engine voice + script-generated SFX + background music.
+
+## Planetary flight and surfaces
+
+Planetary flight is being expanded into four automatic regimes. A craft uses
+**supercruise** where gravity and atmosphere are negligible, **gravity cruise**
+inside a body's gravity region, **hypersonic flight** during atmospheric entry,
+and **survey flight** in the lower atmosphere or close to an airless surface.
+Airless bodies skip the hypersonic regime. Transitions will blend instead of
+carrying supercruise velocity into terrain.
+
+Atmosphere boundaries are not fixed constants copied into each planet recipe.
+Known bodies use observed physical inputs; invented bodies generate stable,
+plausible inputs from their type and seed. The environment cook derives gravity,
+escape velocity, scale height, atmospheric extent, and density by altitude from
+properties such as:
+
+```gdscript
+"physical": {
+    "radius_km": 6371.0,
+    "mass_earth": 1.0,
+    "temperature_k": 288.0,
+    "surface_pressure_bar": 1.0,
+    "molar_mass": 0.029,
+}
+```
+
+Pressure and composition cannot be inferred honestly from radius alone, so they
+come from observations or deterministic procedural assumptions. Flight responds
+to local gravity, atmospheric density, dynamic pressure, speed, and terrain
+proximity rather than a universal altitude cutoff.
+
+The visual path has three scales: the cooked globe from orbit, regional displaced
+terrain during descent, and a local survey patch for mountains, coastlines, water,
+rocks, clouds, and biome props. The generator recipe is the shared source of truth
+for physics, flight transitions, atmosphere rendering, and surface generation.
+See [`PLANET_GENERATOR.md`](PLANET_GENERATOR.md) for the current cook and LOD contract.
 
 ## Controls
 `WASD` thrust · `Space/Ctrl` up·down · `Q/E` roll · `Shift` boost · `mouse` aim ·
