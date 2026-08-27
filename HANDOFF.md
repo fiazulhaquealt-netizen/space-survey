@@ -1,3 +1,44 @@
+# Astryx — Authored ship roster and propulsion handoff (2026-08-27)
+
+## Current state
+
+- The player roster is now exactly three authored ships: **Class II Galactic
+  Cruiser** (default), **Snarkrans Starship**, and **Dingo57 Starship**.
+- The previous player ships, their dedicated engine loops/music, and the random
+  procedural booster-layout system were removed.
+- Hull customization is restored for every non-booster surface. Propulsion
+  surfaces are excluded by shader identity and always remain white-hot.
+- Class II uses its six authored `propulsion` patches as exact sockets. Each has
+  a nested HDR white core and blue-white fog sheath behind the nozzle face.
+- Snarkrans uses the user-identified `.000` and `.010_...018` upper-booster
+  objects plus the `.005_...035` and `.001_...034` lower-pair objects. Their
+  three empty centers are filled with dense emissive plugs, then extended with
+  the same nested torch treatment.
+- Dingo57's eight user-identified booster groups retain their authored geometry
+  and receive the dedicated HDR propulsion material.
+- Dingo57 `Group_107` and `Group_068` are preserved as dedicated opaque,
+  double-sided hull surfaces; do not merge them back into the shared material
+  bucket or Godot's backface culling makes those pieces appear missing.
+- Booster materials react to throttle, boost, warp charge, and starvation
+  sputter. No booster position is randomized.
+
+## Verification and constraints
+
+- Headless contract tests cover all three imported ships and customization.
+- Codex did not launch or visually render the game; the user reviewed the visual
+  result and accepted the current pass as good enough to push.
+- Keep future booster work mesh-specific. Tune the authored surface/socket and
+  its emissive plume; do not restore the old random booster generator.
+- Do not record this personal Astryx/space-game work in monthly worklogs.
+
+## Best next action
+
+Continue with user-directed visual tuning. For propulsion, adjust only the named
+ship's socket radius, plume width/length, or shader brightness; preserve the
+other ships and keep booster meshes outside hull recoloring.
+
+---
+
 # Astryx — Session Handoff (Sol cook · 2026-08-20)
 
 Private repo: `git@github.com:Fiazul/space-survey.git` (`main`).

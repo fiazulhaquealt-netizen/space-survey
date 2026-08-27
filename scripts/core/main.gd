@@ -41,8 +41,6 @@ var _locked_wh := ""          # which portal a LOCKED wormhole points to (snapsh
 var _aim_wh_dest := ""        # dest of the portal the ray is nearest to (set in _aim_ranked)
 var _x_hold := 0.0            # seconds X has been held — ≥1s LOCKS the Tab target (orange)
 var _x_fired := false
-var _rmb_hold := 0.0          # seconds right-click held — ≥1s swaps Raptor's Combat/Warp form
-var _rmb_fired := false
 var _nav_locked := ""         # LOCKED map waypoint (orange) — persists until cancelled
 # Player-placed X marks: up to 3 at once, each its own colour. HOLD X marks the current Tab
 # target (toggle the same one off). Session/system-local — cleared when you change systems.
@@ -57,7 +55,6 @@ const MARK_COLS := [           # one colour per X-mark slot, by order placed
 const QUEST_COL := Color(0.78, 0.50, 1.00)   # purple — the tracked-quest marker
 # coins + claimed moved to the GameState autoload (Phase 2a). main reads GameState.coins /
 # GameState.claimed; persistence below still reads/writes them (single writer for now).
-# customization moved to GameState (Phase 2d): GameState.customization, applied to the ship in _ready.
 # visited / nav_unlocked / wormholes_found moved to the GameState autoload (Phase 2b).
 # main reads GameState.visited / .nav_unlocked / .wormholes_found.
 var _nav_goal := ""           # star the map asked to guide to (orange waypoint). The guide
@@ -169,10 +166,10 @@ func _ready() -> void:
 	# Player ship (visual + flight). Pinned at origin; we move the universe.
 	ship = Ship.new()
 	add_child(ship)
+	ship.load_customization(GameState.customization)
 	ship.true_pos = Ephemeris.geo_start_pos()
 	ship.face_toward(-ship.true_pos)   # open looking at Earth (the origin)
 	ship.newton = true                 # Sol: real pull, parked spawn falls
-	ship.load_customization(GameState.customization)   # restore saved per-ship colours/bell/finish
 
 	# Chase camera lives on the world root; the ship drives its transform each
 	# frame (with a little lag) so it isn't rigidly bolted to the hull.
@@ -248,9 +245,8 @@ func _ready() -> void:
 	hud.teleport_button.pressed.connect(teleport_home)
 	hud.tp_cancel_button.pressed.connect(cancel_teleport)   # abort an in-progress teleport
 	hud.ship_selected.connect(_on_hangar_pick)   # click a hangar row to swap ship
-	hud.ship_color_selected.connect(_on_ship_color_pick)   # click a swatch to recolour the hull
-	hud.ship_bell_toggled.connect(_on_ship_bell_toggle)    # add/remove the booster engine bell
-	hud.ship_finish_selected.connect(_on_ship_finish_pick)  # metallic / glassy surface finish
+	hud.ship_color_selected.connect(_on_ship_color_pick)
+	hud.ship_finish_selected.connect(_on_ship_finish_pick)
 	hud.open_teleport_map.connect(_on_open_teleport_map)    # dock → open the teleport-network map
 
 	# Discovery progress (persisted) + real planet facts + the Details panel.
@@ -704,7 +700,7 @@ func _save_profile() -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(PROFILE_PATH)            # keep any other keys we add later
 	if ship != null:
-		GameState.customization = ship.customization_state()   # capture live ship look before saving
+		GameState.customization = ship.customization_state()
 	GameState.save_into(cfg)   # all persisted profile fields
 	cfg.set_value("player", "active_quest", _active_quest)
 	if ship != null:
@@ -938,12 +934,11 @@ func _sol_fully_unlocked() -> bool:
 	return true
 
 
-# Hold-to-act inputs (checked each frame): HOLD X ≥1s locks the current Tab target as an
-# orange waypoint; HOLD right-click ≥1s swaps Raptor's Combat/Warp form (moved off the X tap).
+# Hold-to-act input (checked each frame): HOLD X ≥1s locks the current Tab target as an
+# orange waypoint.
 func _update_holds(delta: float) -> void:
 	if ship.transiting:
 		_x_hold = 0.0; _x_fired = false
-		_rmb_hold = 0.0; _rmb_fired = false
 		return
 	# X-mark works even when frozen — parked at a star (or held by a guardian) is exactly when
 	# you want to mark it. Only mid-wormhole transit blocks it (handled above).
@@ -957,17 +952,6 @@ func _update_holds(delta: float) -> void:
 	# Feed the crosshair lock ring — only fills when there's actually a Tab target to lock.
 	if hud != null:
 		hud.set_lock_progress(clampf(_x_hold, 0.0, 1.0) if _nav_target != "" else 0.0)
-	# Raptor's Combat/Warp swap stays blocked while frozen (no sense changing modes parked).
-	if not ship.frozen and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
-		_rmb_hold += delta
-		if _rmb_hold >= 1.0 and not _rmb_fired:
-			_rmb_fired = true
-			var mode := ship.toggle_warp_mode()   # only Raptor responds; "" otherwise
-			if mode != "":
-				hud.toast = "RAPTOR  ·  %s MODE" % mode
-				hud.toast_t = 2.5
-	else:
-		_rmb_hold = 0.0; _rmb_fired = false
 
 
 # HOLD X over the current Tab target: drop a coloured X mark (up to 3, each its own colour).
@@ -1695,7 +1679,7 @@ func _input(event: InputEvent) -> void:
 		ship.auto_cruise = false
 		hud.toast = "AUTO-CRUISE  OFF"
 		hud.toast_t = 2.0
-	elif docked and key >= KEY_1 and key <= KEY_9:
+	elif docked and key >= KEY_1 and key <= KEY_3:
 		ship.swap_ship(key - KEY_1)
 		combat.player_hp = ship.max_hp   # new hull -> its full defence
 
@@ -1808,12 +1792,6 @@ func _on_hangar_pick(index: int) -> void:
 func _on_ship_color_pick(part: String, key: String) -> void:
 	if docked:
 		ship.set_ship_color(part, key)
-		_save_profile()   # remember this hull's colour across sessions
-
-
-func _on_ship_bell_toggle(on: bool) -> void:
-	if docked:
-		ship.set_ship_bell(on)
 		_save_profile()
 
 

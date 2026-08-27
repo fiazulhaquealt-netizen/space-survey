@@ -1,0 +1,23 @@
+newmtl booster_tip
+Kd 1.0 1.0 1.0
+Ks 1.0 1.0 1.0
+Ns 128
+d 0.86
+
+newmtl booster_bottom
+Kd 1.0 1.0 1.0
+Ks 1.0 1.0 1.0
+Ns 128
+d 0.86
+
+newmtl booster_upper_shell
+Kd 1.0 1.0 1.0
+Ks 1.0 1.0 1.0
+Ns 128
+d 0.86
+
+newmtl booster_lower_shell
+Kd 1.0 1.0 1.0
+Ks 1.0 1.0 1.0
+Ns 128
+d 0.86

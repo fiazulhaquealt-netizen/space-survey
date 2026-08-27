@@ -34,22 +34,15 @@ own temper and her own way of eating distance. You don't own a ship in *Astryx*.
 borrow one, and she decides how the trip goes. The station keeps them all fuelled and
 waiting; which one you take is only ever your mood, never your rank.
 
-- **Lyra** — the starter. The hull they hand you first, the one you launch in. Honest,
-  unfussy, forgiving of a clumsy hand on the stick. Everyone's first sky was Lyra's.
+- **Class II Galactic Cruiser** — the station's default long-range hull. A ribbon of
+  shifting colour runs around her windows, while the broad rear drive burns so bright
+  its metal disappears into blue-white light.
 
-- **Stella** — the original. The OG: balanced, dependable, the ride that never lets
-  you down and never shows off about it. The name once belonged to Lyra and was set
-  free; now it's Stella's alone, and it fits her.
+- **Snarkrans Starship** — sharp, quick, and built around a tip drive with a lower
+  twin-booster bank. Every flame follows the geometry the shipwright gave it.
 
-- **Raptor** — the dangerous one. She runs two faces and you flip between them on a
-  switch: **Combat**, where she becomes a wall of fire, and **Warp**, where she tears
-  a hole in the distance and crosses it before the light catches up. Her booster burns
-  purple — you know her by the trail.
-
-- **Vela** — the sleek FTL cruiser, built for one thing: speed. Her warp drive winds
-  up slow and then *blazes*, crossing a whole system on a single charge. Her booster
-  burns gold. Pilots talk about Vela the way they talk about weather they barely
-  survived.
+- **Dingo57 Starship** — the heavy torch. Eight rear elements ignite together until
+  their machinery vanishes inside one fog-edged wall of light.
 
 Every hull is heavy in the hand — they carry their speed. Point her into a turn and
 she *banks* into it, arcing the way real mass moves; she doesn't snap. Near a big
@@ -79,7 +72,7 @@ the good pilots learn its rhythms:
   and keeps an arrow on it; follow the arrow and the distance counts down. Cycle it to
   aim elsewhere whenever you like.
 
-- **Warp / FTL** — the long-haul gift. Vela and Raptor-in-Warp spool their drives up
+- **Warp / FTL** — the long-haul gift. Every Survey hull can spool its authored drive
   toward light-year cruise and then back down. While she's screaming across the void,
   the guns go quiet — there's no fighting at that speed, only arriving. As you fall
   toward your mark she eases *out* of warp on her own, so you arrive instead of blowing

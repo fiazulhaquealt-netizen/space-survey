@@ -50,19 +50,11 @@ var _notify: AudioStreamPlayer    # tutorial notification "ting-tong"
 var _reward: AudioStreamPlayer    # capture-reward "happy" fanfare
 var _pickup: AudioStreamPlayer   # short low blip for grabbing an energy cell
 
-# Per-ship loop streams (distinct timbre per hull, see tools/gen_engine_audio.py);
-# falls back to the shared engine_loop.ogg for any hull without a dedicated file.
-# "Raptor_Warp" is Raptor's second form (warp mode) — a thicker drive voice that
-# we swap to while warp is engaged; the fade/duck arc below is shared by all loops.
-const SHIP_LOOPS := ["Lyra", "Stella", "Raptor", "Raptor_Warp", "Vela"]
-
 var _eng_loop: AudioStreamPlayer
 var _eng_start: AudioStreamPlayer
 var _eng_stop: AudioStreamPlayer
 var _eng_on := false            # is the engine currently "running" (loop active)?
-var _eng_streams := {}          # ship name -> looping AudioStream
-var _eng_default: AudioStream   # shared fallback loop
-var _eng_ship := ""             # which ship's loop is currently loaded into _eng_loop
+var _eng_default: AudioStream   # shared authored-ship engine loop
 var _eng_sustain := 0.0         # seconds of continuous driving (drives cruise settle)
 var _engine_duck_db := 0.0      # dB the engine is pulled back (set by main while ship music is up)
 
@@ -94,11 +86,6 @@ func _ready() -> void:
 
 	# Engine: a looping body bookended by one-shot start/stop transients.
 	_eng_default = _load_loop("res://assets/engine_loop.ogg")
-	for ship_name in SHIP_LOOPS:
-		var path := "res://assets/engine_loop_%s.ogg" % ship_name.to_lower()
-		var s := _load_loop(path)
-		if s != null:
-			_eng_streams[ship_name] = s
 	_eng_loop = AudioStreamPlayer.new()
 	_eng_loop.stream = _eng_default
 	_eng_loop.volume_db = ENGINE_OFF_DB
@@ -165,32 +152,14 @@ func _load_loop(path: String) -> AudioStream:
 	return s
 
 
-# Swap in the loop voice for the given ship (only does work when it changes).
-func _select_ship_loop(ship_name: String) -> void:
-	if ship_name == _eng_ship:
-		return
-	_eng_ship = ship_name
-	var s: AudioStream = _eng_streams.get(ship_name, _eng_default)
-	_eng_loop.stream = s
-	if _eng_on:
-		_eng_loop.play()   # restart on the new voice; volume/pitch carry over
-
-
 # Engine voice, driven by the ship every frame.
-#   ship_name : which hull (selects its distinct loop voice)
 #   thrusting : is the player on the gas (any thrust input)?
 #   intensity : 0..1 throttle (how hard) — shapes cruise volume + pitch
 #   boost     : Shift held — louder, revved up higher/faster, eased in smoothly
 #   pitch_mul : per-ship pitch nudge layered on top of the distinct loop
-#   warp_mode : Raptor's second form is engaged — swap to its thicker drive voice
 # Plays a one-shot "start" whoosh on the rising edge, a "stop" whoosh on release,
 # and crossfades the continuous loop in between.
-func update_engine(ship_name: String, thrusting: bool, intensity: float, boost: bool, pitch_mul: float, delta: float, warp_mode := false) -> void:
-	# Raptor's warp form rides on its own thicker loop; everything else (fade,
-	# duck, spool, pitch) is identical to the standard per-ship voice.
-	if warp_mode and ship_name == "Raptor":
-		ship_name = "Raptor_Warp"
-	_select_ship_loop(ship_name)
+func update_engine(_ship_name: String, thrusting: bool, intensity: float, boost: bool, pitch_mul: float, delta: float) -> void:
 	intensity = clampf(intensity, 0.0, 1.0)
 
 	if thrusting and not _eng_on:

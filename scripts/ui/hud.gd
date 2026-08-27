@@ -27,9 +27,8 @@ const RIGHT_EDGE := 1264.0
 var _text_shader := load("res://shaders/hud_text.gdshader") as Shader
 
 signal ship_selected(index: int)   # emitted when a hangar row is clicked
-signal ship_color_selected(part: String, key: String)   # part = "body" | "wing", key = palette
-signal ship_bell_toggled(on: bool)   # add/remove the booster engine bell
-signal ship_finish_selected(key: String)   # "metallic" | "glassy"
+signal ship_color_selected(part: String, key: String)
+signal ship_finish_selected(key: String)
 signal open_teleport_map()   # clicked the dock's "TELEPORT NETWORK" button -> open the map
 
 var ship: Ship
@@ -815,12 +814,9 @@ const CONTROLS := [
 	["Spc/Ctrl", "Climb / dive"],
 	["Shift", "Boost"],
 	["W hold", "Spool warp (open space)"],
-	["R", "Air-brake (Vela)"],
 	["Num Lk", "Auto-cruise toggle"],
 	["L-Click", "Fire weapons"],
-	["R-Click", "Laser (Raptor 2)"],
 	["T / RMB", "Free-look (hold)"],
-	["RMB hold", "Raptor form swap"],
 	["Tab", "Cycle target"],
 	["X hold", "Lock nav target"],
 	["W + C", "Drift-flip leap (escape)"],
@@ -831,7 +827,7 @@ const CONTROLS := [
 	["J", "Mission log"],
 	["M", "Star map"],
 	["F", "Dock / wormhole"],
-	["1–7", "Swap ship (docked)"],
+	["1–3", "Swap ship (docked)"],
 	["H", "Teleport home"],
 	["F11", "Fullscreen"],
 	["Esc", "Release cursor / back"],
@@ -847,11 +843,11 @@ const GUIDE := [
 	["TELEPORT  (H)",
 	 "Press H anywhere for an emergency jump straight home to Earth: a light-ball wraps the ship, shrinks to a bead, and you arrive. It is the rare, theatrical exception — ordinary travel between stars is always flown through wormholes."],
 	["PLATFORMS & STATIONS",
-	 "Every charted system has a dockable platform; Earth has the home station. Press F nearby to dock, then swap ships (1–7), recolour them, and open the TELEPORT NETWORK. From the network you can jump to any platform you have already reached and arrive right beside it. All platforms share the same ship roster and the same network."],
+	 "Every charted system has a dockable platform; Earth has the home station. Press F nearby to dock, then swap among the three authored ships (1–3) and open the TELEPORT NETWORK. From the network you can jump to any platform you have already reached and arrive right beside it. All platforms share the same ship roster and the same network."],
 	["WARP & FLIGHT",
-	 "WASD thrusts, Shift boosts (drains the boost bar), Q/E roll, Space/Ctrl climb and dive. Hold W in open space to spool the warp drive and cross light-years; near stars and planets you are held to sublight. Num Lock toggles hands-free auto-cruise; Vela air-brakes with R. Hold W and tap C for a drift-flip LEAP — a quick boost with a slow, wide cinematic barrel roll (A/D picks the side). The leap punches through a star/planet slow-zone, so it's how you break free when gravity is holding you in."],
+	 "WASD thrusts, Shift boosts (drains the boost bar), Q/E roll, Space/Ctrl climb and dive. Hold W in open space to spool the warp drive and cross light-years; near stars and planets you are held to sublight. Num Lock toggles hands-free auto-cruise. Hold W and tap C for a drift-flip LEAP — a quick boost with a slow, wide cinematic barrel roll (A/D picks the side). The leap punches through a star/planet slow-zone, so it's how you break free when gravity is holding you in."],
 	["COMBAT & DISCOVERY",
-	 "Left-click fires instant ray-bullets down the crosshair (opening fire eases you to combat speed); Raptor 2 fires a nose laser on right-click. Press V near a body to scan/capture it — that fills the Codex (L), the details panel (G), and completes its survey mission. A guarded body's boss is SHIELDED until you clear its summoned swarm — kill the minions first, then burn the boss down to capture the body."],
+	 "Left-click fires instant ray-bullets down the crosshair (opening fire eases you to combat speed). Press V near a body to scan/capture it — that fills the Codex (L), the details panel (G), and completes its survey mission. A guarded body's boss is SHIELDED until you clear its summoned swarm — kill the minions first, then burn the boss down to capture the body."],
 ]
 
 func _build_controls_menu(canvas: CanvasLayer) -> void:
@@ -1084,18 +1080,13 @@ func _linear_gradient(top: Color, bottom: Color) -> GradientTexture2D:
 # Show/refresh the ship-pickup table. Rebuilds rows only when the contents change
 # (ship set, current selection, or station name), so it's cheap to call per frame.
 func set_hangar(open: bool, names: PackedStringArray, current: int, station: String, teleports := []) -> void:
-	# Body-colour swatches show for hulls that allow it (HaniNebula). Track the chosen key in
-	# the signature so the table rebuilds (and re-highlights) when the colour changes.
 	var has_color: bool = open and ship != null and ship.current_has_color_pick()
 	var body_key: String = ship.current_body_color() if has_color else ""
-	var wing_key: String = ship.current_wing_color() if has_color else ""
-	var has_wing: bool = has_color and ship.current_has_wing_pick()
-	var bell: bool = has_color and ship.current_bell()
 	var finish: String = ship.current_finish() if has_color else ""
 	var tp_sig := ""
 	for t in teleports:
 		tp_sig += String(t.id) + ","
-	var sig := ("%d|%s|%s|%s|%s|%s|%s|%s" % [current, station, ",".join(names), body_key, wing_key, str(bell), finish, tp_sig]) if open else ""
+	var sig := ("%d|%s|%s|%s|%s|%s" % [current, station, ",".join(names), body_key, finish, tp_sig]) if open else ""
 	if sig == _hangar_sig:
 		return
 	_hangar_sig = sig
@@ -1115,12 +1106,7 @@ func set_hangar(open: bool, names: PackedStringArray, current: int, station: Str
 	for i in names.size():
 		_hangar_rows.add_child(_make_hangar_row(names[i], i, i == current))
 	if has_color:
-		_hangar_rows.add_child(_make_color_swatches("BODY COLOUR", "body", body_key))
-		if has_wing:
-			_hangar_rows.add_child(_make_color_swatches("WING COLOUR", "wing", wing_key))
-		_hangar_rows.add_child(_make_choice_row("ENGINE BELL",
-			[{"key": "on", "label": "ADD"}, {"key": "off", "label": "REMOVE"}],
-			"on" if bell else "off", _on_bell_choice))
+		_hangar_rows.add_child(_make_color_swatches("SHIP COLOUR", body_key))
 		_hangar_rows.add_child(_make_choice_row("FINISH",
 			[{"key": "metallic", "label": "METALLIC"}, {"key": "glassy", "label": "GLASSY"}],
 			finish, _on_finish_choice))
@@ -1172,88 +1158,75 @@ func _on_hangar_row_input(event: InputEvent, idx: int) -> void:
 		ship_selected.emit(idx)
 
 
-# A "BODY COLOUR" label + a row of clickable colour swatches. The current colour is ringed
-# in white. Clicking a swatch emits ship_color_selected(key); main rebuilds the hull.
-func _make_color_swatches(title: String, part: String, current_key: String) -> Control:
+func _make_color_swatches(title: String, current_key: String) -> Control:
 	var pad := MarginContainer.new()
 	pad.add_theme_constant_override("margin_top", 6)
 	var wrap := VBoxContainer.new()
 	wrap.add_theme_constant_override("separation", 4)
 	pad.add_child(wrap)
-	var lbl := _new_label(10, Color(0.7, 0.95, 1.0))
-	lbl.text = title
-	wrap.add_child(lbl)
+	var label := _new_label(10, Color(0.7, 0.95, 1.0))
+	label.text = title
+	wrap.add_child(label)
 	var grid := GridContainer.new()
-	grid.columns = 7   # wrap to multiple rows so the swatch strip never overflows the panel
+	grid.columns = 7
 	grid.add_theme_constant_override("h_separation", 5)
 	grid.add_theme_constant_override("v_separation", 5)
 	wrap.add_child(grid)
-	for p in Ship.SHIP_PALETTES:
-		var sel: bool = String(p.key) == current_key
-		var btn := Button.new()
-		btn.custom_minimum_size = Vector2(24, 24)
-		btn.tooltip_text = String(p.name)
-		btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = p.swatch
-		sb.set_border_width_all(3 if sel else 1)
-		sb.border_color = Color(1, 1, 1, 0.95) if sel else Color(0.35, 0.5, 0.65, 0.8)
-		sb.set_corner_radius_all(4)
-		# Same look in every button state (no theme tint flicker on hover/press).
-		for st in ["normal", "hover", "pressed", "focus", "disabled"]:
-			btn.add_theme_stylebox_override(st, sb)
-		btn.pressed.connect(_on_swatch_pressed.bind(part, String(p.key)))
-		grid.add_child(btn)
+	for palette in Ship.SHIP_PALETTES:
+		var selected: bool = String(palette.key) == current_key
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(24, 24)
+		button.tooltip_text = String(palette.name)
+		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var style := StyleBoxFlat.new()
+		style.bg_color = palette.swatch
+		style.set_border_width_all(3 if selected else 1)
+		style.border_color = Color(1, 1, 1, 0.95) if selected else Color(0.35, 0.5, 0.65, 0.8)
+		style.set_corner_radius_all(4)
+		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+			button.add_theme_stylebox_override(state, style)
+		button.pressed.connect(_on_swatch_pressed.bind(String(palette.key)))
+		grid.add_child(button)
 	return pad
 
 
-func _on_swatch_pressed(part: String, key: String) -> void:
-	ship_color_selected.emit(part, key)
+func _on_swatch_pressed(key: String) -> void:
+	ship_color_selected.emit("body", key)
 
 
-# A labelled row of small segmented option buttons (the active one is lit). `opts` is an
-# Array of { key, label }; clicking calls `cb` with the chosen key.
-func _make_choice_row(title: String, opts: Array, current_key: String, cb: Callable) -> Control:
+func _make_choice_row(title: String, options: Array, current_key: String, callback: Callable) -> Control:
 	var pad := MarginContainer.new()
 	pad.add_theme_constant_override("margin_top", 6)
 	var wrap := VBoxContainer.new()
 	wrap.add_theme_constant_override("separation", 3)
 	pad.add_child(wrap)
-	var lbl := _new_label(10, Color(0.7, 0.95, 1.0))
-	lbl.text = title
-	wrap.add_child(lbl)
+	var label := _new_label(10, Color(0.7, 0.95, 1.0))
+	label.text = title
+	wrap.add_child(label)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
 	wrap.add_child(row)
-	for o in opts:
-		var sel: bool = String(o.key) == current_key
-		var btn := Button.new()
-		btn.text = String(o.label)
-		btn.custom_minimum_size = Vector2(0, 18)
-		btn.add_theme_font_size_override("font_size", 9)
-		btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(0.18, 0.45, 0.70, 0.55) if sel else Color(0.10, 0.16, 0.24, 0.40)
-		sb.border_color = Color(0.6, 0.95, 1.0, 0.95) if sel else Color(0.35, 0.5, 0.65, 0.6)
-		sb.set_border_width_all(1)
-		sb.set_corner_radius_all(3)
-		sb.content_margin_left = 8
-		sb.content_margin_right = 8
-		sb.content_margin_top = 3
-		sb.content_margin_bottom = 3
-		for st in ["normal", "hover", "pressed", "focus"]:
-			btn.add_theme_stylebox_override(st, sb)
-		btn.pressed.connect(cb.bind(String(o.key)))
-		row.add_child(btn)
+	for option in options:
+		var selected: bool = String(option.key) == current_key
+		var button := Button.new()
+		button.text = String(option.label)
+		button.add_theme_font_size_override("font_size", 9)
+		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(0.18, 0.45, 0.70, 0.55) if selected else Color(0.10, 0.16, 0.24, 0.40)
+		style.border_color = Color(0.6, 0.95, 1.0, 0.95) if selected else Color(0.35, 0.5, 0.65, 0.6)
+		style.set_border_width_all(1)
+		style.set_corner_radius_all(3)
+		for state in ["normal", "hover", "pressed", "focus"]:
+			button.add_theme_stylebox_override(state, style)
+		button.pressed.connect(callback.bind(String(option.key)))
+		row.add_child(button)
 	return pad
-
-
-func _on_bell_choice(key: String) -> void:
-	ship_bell_toggled.emit(key == "on")
 
 
 func _on_finish_choice(key: String) -> void:
 	ship_finish_selected.emit(key)
+
 
 
 # Hold-X lock progress (0..1), fed by main each frame; redraws the ring around the crosshair.

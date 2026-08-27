@@ -20,7 +20,7 @@ func _ready() -> void:
 	rng.seed = 9137
 	for i in 5:
 		_splatters.append(_make_splatter(rng))
-	_trail_grad = ShipMesh.make_plume_gradient(true)   # bright at the head (+Y), clear at the tail
+	_trail_grad = _make_trail_gradient()   # bright at the head (+Y), clear at the tail
 
 
 # A layered impact spark at a hit point (picks a random ragged splatter, grows + fades out).
@@ -123,6 +123,17 @@ func _make_glow() -> Texture2D:
 		for x in s:
 			var d := Vector2(x + 0.5, y + 0.5).distance_to(c) / (s * 0.5)
 			img.set_pixel(x, y, Color(1, 1, 1, pow(clampf(1.0 - d, 0.0, 1.0), 1.6)))
+	return ImageTexture.create_from_image(img)
+
+
+func _make_trail_gradient() -> Texture2D:
+	var h := 64
+	var img := Image.create(2, h, false, Image.FORMAT_RGBA8)
+	for y in h:
+		var t := 1.0 - float(y) / float(h - 1)
+		var a := pow(1.0 - t, 1.4)
+		for x in 2:
+			img.set_pixel(x, y, Color(1.0, 1.0, 1.0, a))
 	return ImageTexture.create_from_image(img)
 
 

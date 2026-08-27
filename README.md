@@ -16,17 +16,14 @@ a small reusable surface kit.
 - **Real positions** — Sun + planets from live **JPL Horizons**, **~50 of the nearest
   real star systems** from the J2000 catalog. Earth is the origin (floating-origin
   engine for AU↔ly scale).
-- **Seven ships** — Lyra, Stella, Raptor, **Vela** (FTL), **HaniStar**,
-  **Raptor 2 Neo** (laser mother-ship), **HaniNebula**. Dock with **F**, swap with
-  **1–7**. Each hull has its own stats, boosters, and engine voice.
-- **In-hangar customizer** — on HaniStar, HaniNebula & Raptor 2 Neo, pick **body /
-  wing colours** (10-colour palette incl. **Champagne Gold** metallic), toggle the
-  **engine bell**, and switch **metallic / glassy** finish. Choices are saved
-  per-ship to your profile and persist across sessions.
+- **Three authored ships** — **Class II Galactic Cruiser** (default), **Snarkrans
+  Starship**, and **Dingo57 Starship**. Dock with **F** and swap with **1–3**.
+  Each model keeps its own booster meshes, rendered as extremely bright,
+  speed-reactive, edge-faded propulsion—no random procedural booster layouts.
 - **Editable HUD** — drag-place and scale HUD widgets in a layout editor; placement
   persists to your profile (defaults are the shipped layout).
 - **Flight feel** — sublight "space drift" that carries momentum through turns,
-  weighted strafe, eased mouse-steer, and living animated booster flames.
+  weighted strafe, eased mouse-steer, and living animated authored propulsion.
 - **Recipe-cooked worlds** — one generator paints stars, planets, and moons from
   observed maps when available and stable seeded properties otherwise. Close LODs
   add height, water, clouds, rocks, and other recipe-selected surface details.
@@ -34,8 +31,8 @@ a small reusable surface kit.
   *tested* guarantee: **Earth → anywhere ≤ 2 hops, any → any ≤ 3 hops** — you're never more
   than 3 jumps from a star. Fly to a portal, press **F**, transit the tunnel, arrive.
   See [`WORMHOLE_NETWORK.md`](WORMHOLE_NETWORK.md).
-- **Combat** — instant **hitscan "ray bullets"** (left-click; aim by flying), right-click nose
-  laser on Raptor 2; alien ships hunt and fire dodgeable bolts. Guarded bodies are defended by
+- **Combat** — instant **hitscan "ray bullets"** (left-click; aim by flying); alien
+  ships hunt and fire dodgeable bolts. Guarded bodies are defended by
   a **named boss** + finite **guardian waves** — clear the swarm, break the boss, capture the
   body for **coins** (with a capture-celebration payout).
 - **Ray Tab-targeting** — **Tab** locks onto whatever your nose points at (nearest the aim
@@ -52,7 +49,7 @@ a small reusable surface kit.
 - **Star gravity & teleport** — stars gently pull you in (and let go once you thrust away, so
   you're never trapped). A rare, theatrical **teleport ritual** handles emergency-home and
   station→station jumps; a **platform-network console** fast-travels between unlocked stations.
-- **Audio** — per-ship engine voice + script-generated SFX + background music.
+- **Audio** — engine voice + script-generated SFX + background music.
 
 ## Planetary flight and surfaces
 
@@ -92,10 +89,10 @@ See [`PLANET_GENERATOR.md`](PLANET_GENERATOR.md) for the current cook and LOD co
 
 ## Controls
 `WASD` thrust · `Space/Ctrl` up·down · `Q/E` roll · `Shift` boost · `mouse` aim ·
-**`L-click` fire** · **`R-click` laser** (Raptor 2) · `R` Vela air-brake ·
+**`L-click` fire** ·
 `Num Lock` auto-cruise · `W+C` drift-flip · **`Tab`** waypoint · **`V`** scan · **`L`** codex ·
 **`J`** mission log · **`G`** details · **`M`** map · **`F`** dock / wormhole · **`H`** teleport to Earth ·
-wheel zoom · **`1–7`** swap ship (docked) · `Esc` free cursor / back
+wheel zoom · **`1–3`** swap ships (docked) · `Esc` free cursor / back
 
 ## Run
 Install **Godot 4** (GDScript, no C#), open this folder as a project, press **F5**.

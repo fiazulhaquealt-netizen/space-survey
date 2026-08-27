@@ -31,7 +31,7 @@ var _tips := [
 	{ "t": "Fire", "s": "Left-click to shoot.",
 	  "d": "Your guns fire instant ray-bullets straight down the crosshair. Hold to keep firing; opening fire slows you to combat speed." },
 	{ "t": "Dock & wormholes", "s": "Press  F  to dock or enter a wormhole.",
-	  "d": "Near a station, F docks (swap ships, customize, teleport). Near a glowing wormhole, F dives through to a neighbouring system." },
+	  "d": "Near a station, F docks (swap ships or teleport). Near a glowing wormhole, F dives through to a neighbouring system." },
 	{ "t": "Scan to discover", "s": "Press  V  near a body to scan it.",
 	  "d": "Scanning reveals a body's data in the Codex (L) and details panel (G), and completes its survey mission." },
 	{ "t": "Mission Log", "s": "Press  J  for missions.",
@@ -51,7 +51,7 @@ var _tips := [
 	{ "t": "Break free", "s": "Trapped near a star?  W + C  to leap out.",
 	  "d": "Stars and planets force-slow you inside their zone — it can feel like you're stuck. Aim AWAY from the body and hold W + tap C: the drift-flip leap bypasses the slow-zone and shoots you clear. Chain it if you're deep in the well." },
 	{ "t": "Switch ships", "s": "Go to a station to switch ships.",
-	  "d": "Fly to any platform/station and press F to dock, then pick a hull (1–7) in the hangar. Each flies differently — tanky, glass-cannon, FTL, support, mother-ship — and some recolour in the hangar." },
+	  "d": "Fly to any platform/station and press F to dock, then pick one of the three authored hulls (1–3) in the hangar. Each keeps its own mesh-built, torch-bright propulsion." },
 ]
 
 var _order := []

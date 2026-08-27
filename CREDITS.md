@@ -19,10 +19,18 @@ The **3D ship & prop models** are free assets, sourced mainly from:
 - **Poly Pizza** — https://poly.pizza/
 - **Free3D** — https://free3d.com/
 
-**Vela Iron Pulse** ship (`assets/jl_7_low.glb`):
+**Class II Galactic Cruiser** (`assets/class_ii_galactic_cruiser/*`):
 
-- *"jl 7 low"* (https://skfb.ly/oJBFS) by **ztrztr**, licensed under
-  **Creative Commons Attribution 4.0** (http://creativecommons.org/licenses/by/4.0/).
+- Model and textures by **Herminio Nieves** ([CGTrader designer page](https://www.cgtrader.com/designers/herminio?utm_source=credit&utm_source=credit_item_page)).
+- The included author readme permits commercial and non-commercial use with appropriate credit.
+
+**Snarkrans Starship** (`assets/snarkrans_starship/*`):
+
+- Model by **Denis Polyakov / Snarkrans** ([CGTrader designer page](https://www.cgtrader.com/designers/snarkrans?utm_source=credit&utm_source=credit_item_page)).
+
+**Dingo57 Starship** (`assets/dingo57_starship/*`):
+
+- Model by **Dingo57** ([CGTrader designer page](https://www.cgtrader.com/designers/dingo57?utm_source=credit&utm_source=credit_item_page)).
 
 **Galaxy model** (`assets/galaxy.glb`):
 

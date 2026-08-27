@@ -8,8 +8,6 @@ extends Node
 
 var _music: AudioStreamPlayer          # the SHIP / interstellar track
 var _music_default: AudioStream        # the shared bgm every hull flies to
-var _music_hani: AudioStream           # HaniNebula's dedicated theme (null if missing)
-var _music_track := ""                 # which ship stream is loaded: "default" | "hani"
 var _music_lobby: AudioStreamPlayer    # the LOBBY / local track (bgm_lobby.ogg)
 
 const MUSIC_DB := -13.0    # ship-track level once faded in
@@ -21,9 +19,6 @@ const MUSIC_FADE_OUT := 0.6  # lobby-track fade-out
 const SHIP_FADE_OUT := 0.6   # ship-track fade-out
 const MUSIC_FADE_IN := 0.7   # incoming fade speed — slow, cinematic swell
 const SHIP_ENGINE_DUCK_DB := 10.0  # dB the engine recedes once the interstellar ship music is up
-# These hulls share the dedicated interstellar theme (bgm_hani.ogg); every other ship the default.
-const THEMED_HULLS := ["HaniNebula", "Raptor 2 Neo", "Vela Iron Pulse", "Lyra"]
-
 var _cur_track := "lobby"          # "lobby" | "ship"
 var _xfade_phase := "fadein"       # start by swelling the lobby track in at launch
 var _gap_t := 0.0                  # remaining engine-only gap (seconds)
@@ -35,11 +30,8 @@ func _ready() -> void:
 	_music_default = _load_music("res://assets/bgm.ogg")
 	if _music_default == null:
 		return
-	# HaniNebula gets her own dedicated interstellar theme; everyone else shares bgm.ogg.
-	_music_hani = _load_music("res://assets/bgm_hani.ogg")
 	_music = AudioStreamPlayer.new()
 	_music.stream = _music_default
-	_music_track = "default"
 	_music.volume_db = MUSIC_OFF_DB
 	_music.bus = "Master"
 	# PROCESS_MODE_ALWAYS: keep playing through a paused tree (map / quest log / settings / codex)
@@ -65,16 +57,9 @@ func _ready() -> void:
 
 # Driven from main._process. interstellar = is the ship out in open/FTL space; hull_name = the
 # equipped hull (decides the ship theme). Cross-fades with an engine-only gap at the boundary.
-func update(delta: float, interstellar: bool, hull_name: String) -> void:
+func update(delta: float, interstellar: bool, _hull_name: String) -> void:
 	if _music == null or _music_lobby == null:
 		return
-	# Keep the ship track on the equipped hull's stream, but only swap while it's silent so the
-	# change is never an audible cut (HaniNebula flies to her own theme, others share bgm).
-	var track := _desired_track(hull_name)
-	if track != _music_track \
-		and (_music.stream_paused or _music.volume_db <= MUSIC_OFF_DB + 1.0):
-		_music_track = track
-		_music.stream = _music_hani if track == "hani" else _music_default
 
 	var want := "ship" if interstellar else "lobby"
 	# Debounce the zone boundary: the interstellar flag can flicker right at a zone edge, so only
@@ -119,11 +104,6 @@ func update(delta: float, interstellar: bool, hull_name: String) -> void:
 	# (0 when silent — incl. the engine-only gap — full once it's faded in).
 	var ship_presence := clampf(inverse_lerp(MUSIC_OFF_DB, MUSIC_DB, _music.volume_db), 0.0, 1.0)
 	GameAudio.set_engine_duck(SHIP_ENGINE_DUCK_DB * ship_presence)
-
-
-# Which bgm the equipped hull should fly to (falls back to default if the hani track is missing).
-func _desired_track(hull_name: String) -> String:
-	return "hani" if (_music_hani != null and hull_name in THEMED_HULLS) else "default"
 
 
 func _player_for(track: String) -> AudioStreamPlayer:

@@ -17,6 +17,9 @@ Thumbs.db
 # not committed to source history (they'd bloat the repo / hit the 100MB limit).
 builds/
 
+# Local source snapshots are personal recovery files, not project assets.
+space-survey-code-only-*.zip
+
 .scratch-assets/
 
 # Local agent config (not project source)

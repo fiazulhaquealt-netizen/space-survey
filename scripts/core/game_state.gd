@@ -20,7 +20,7 @@ var wormholes_found := {}      # star id -> true: this star's wormhole found by 
 var onboarding_step := 0       # first-run guided tips: which step the player is on
 var onboarding_done := {}      # set of completed beginner-quest step ids (event-latched)
 
-# --- Ship customization (Phase 2d) — saved per-ship colour/bell/finish, applied in main._ready ---
+# Saved per-ship body colour and finish. Booster appearance is intentionally absent.
 var customization := {}
 
 const CAPTURE_REWARD := 100
